@@ -2,38 +2,40 @@
 library(car)
 library(effsize)
 library(lme4)
-
+library(cowplot)
 library(ggplot2)
 library(stats) #glms
 library(ggthemes)
 library(scales)
 library(tidyr)
 library(dplyr)
+library(ggpubr)
 
-#### ADULTS body condition ##########
-df_all <- read.csv("eximius_body_measurements.csv")
+######## ADULTS  ##########
+# body condition
+df_all <- read.csv("../data/eximius_body_measurements.csv")
 levels(df_all$Measurement)
 df_all$Measurement <- factor(df_all$Measurement, levels= c("before", "after"))
 
-adults <- df_all[-c(which(df_all$instar != "Adult")),]
+adults <- df_all %>% filter(instar == "Adult")
 adults$weight.mg <- adults$weight.grams * 1000
-
-hist(adults$weight.grams)
-hist(sqrt(adults$weight.mg))
-hist(log10(adults$weight.grams))
-
-z <- lm(log10(weight.mg) ~ Measurement, data = adults)
-summary(z)
-anova(z)
-plot(z)
-plot(weight.mg ~ Measurement, data = adults)
+# 
+# hist(adults$weight.grams)
+# hist(sqrt(adults$weight.mg))
+# hist(log10(adults$weight.grams))
+# 
+# z <- lm(log10(weight.mg) ~ Measurement, data = adults)
+# summary(z)
+# anova(z)
+# plot(z)
+# plot(weight.mg ~ Measurement, data = adults)
 
 # adults.before <- adults[c(which(adults$Measurement == "before")),]
 
 y <- lm(log(weight.mg) ~ log(CT.W), data = adults)
 Anova(y)
 summary(y)
-plot(y)
+
 plot(log(weight.mg) ~ log(CT.W), data = adults)
 abline(y)
 adults$resids <- residuals(y)
@@ -52,83 +54,83 @@ ggplot(data=adults, aes(x=CT.W, y = weight.mg))+
         axis.title = element_text(size = 20),
         axis.line = element_line(size = 1.1))
 
-adults.after <- adults[c(which(adults$Measurement == "after")),]
 
 
-y2 <- lmer(resids ~ Treatment + (1|Nest), data = adults.after)
-summary(y2)
-Anova(y2)
-plot(resids ~ Treatment, data = adults.after, ylab = "Body Condition Index", cex.axis = 1.5, cex.lab = 1.5)
+#### adult effect sizes ####
 
-y3 <- lmer(resids ~ Treatment + Measurement + Treatment:Measurement + (1|Nest), data = adults)
-summary(y3)
-Anova(y3)
+# adults, before comparing treatments
+adults.before <- adults %>% 
+  filter(Measurement == "before")
 
-# diff in variance
-leveneTest(y2, center = mean) #non3
+y1 <- lmer(resids ~ Treatment + (1|Nest), data = adults.before)
+Anova(y1, test.statistic = "F")
 
-# y3 <- lm(log10(weight.mg) ~ Treatment, data = adults.after)
-# summary(y3)
-# plot(weight.mg ~ Treatment, data = adults.after)
-# 
-# x <- lm(weight.mg ~ PT.L, data = adults)
-# summary(x)
-# plot(weight.mg ~ PT.L, data = adults)
-# abline(x)
+adult.p0 <- ggplot(data = adults.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
 
+cohen.d(adults.before$resids, adults.before$Treatment)
 
-control <- adults[c(which(adults$Treatment == "Control")),]
-x <- lmer(resids ~ Measurement + (1|Nest), control)
-Anova(x)
-plot(resids ~ Measurement, control,
-     ylab = "Body Condition Index", cex.axis = 1.5, cex.lab = 1.5)
-
-Fig1a <- ggplot(control, aes(x = Measurement, y = resids))+
-  geom_boxplot()+
-  theme_classic()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Residuals")
-
-parasite <- adults[c(which(adults$Treatment == "Parasite")),]
-x <- lmer(resids ~ Measurement + (1|Nest), parasite)
-Anova(x)
-plot(resids ~ Measurement, parasite,
-     ylab = "Body Condition Index", cex.axis = 1.5, cex.lab = 1.5)
-
-Fig1b <- ggplot(parasite, aes(x = Measurement, y = resids))+
-  geom_boxplot()+
-  theme_classic()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Residuals")
-
+# adults, after comparing treatments
+adults.after <- adults %>% 
+  filter(Measurement == "after")
 
 y2 <- lmer(resids ~ Treatment + (1|Nest), data = adults.after)
-Anova(y2)
+Anova(y2, test.statistic = "F")
 
-Fig1c <- ggplot(adults.after, aes(x = Treatment, y = resids))+
-  geom_boxplot()+
-  theme_classic()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Residuals")
+cohen.d(adults.after$resids, adults.after$Treatment)
 
-multiplot(Fig1a, Fig1b, Fig1c, cols = 3)
+adult.p1 <- ggplot(data = adults.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
+
+# adults, control, comparing before and after
+adults.control <- adults %>% 
+  filter(Treatment == "Control")
+
+cohen.d(adults.control$resids, adults.control$Measurement)
+
+y3 <- lmer(resids ~ Measurement + (1|Nest), data = adults.control)
+Anova(y3, test.statistic = "F")
+
+adult.p2 <- ggplot(data = adults.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
+
+# parasites, control, comparing before and after
+adults.parasite <- adults %>% 
+  filter(Treatment == "Parasite")
+
+y4 <- lmer(resids ~ Measurement + (1|Nest), data = adults.parasite)
+Anova(y4, test.statistic = "F")
+
+cohen.d(adults.parasite$resids, adults.parasite$Measurement)
+
+adult.p3 <- ggplot(data = adults.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
+
 
 ####### Sub 2 body condition ########
 levels(df_all$instar)
 #df_all <- read.csv("eximius_body_measurements.csv")
-sub2 <- df_all[-c(which(df_all$instar != "Sub 2")),]
+sub2 <- df_all %>% filter(instar == "Sub 2")
 sub2$weight.mg <- sub2$weight.grams * 1000
 
-hist(sub2$weight.grams)
-hist(sqrt(sub2$weight.mg))
-hist(log10(sub2$weight.grams)) #best
-
-z <- lm(log10(weight.mg) ~ Measurement, data = sub2)
-summary(z)
-anova(z)
-plot(z)
-plot(weight.mg ~ Measurement, data = sub2)
-## overall, sub2 weights greater after than before -- growth
+# hist(sub2$weight.grams)
+# hist(sqrt(sub2$weight.mg))
+# hist(log10(sub2$weight.grams)) #best
+# 
+# z <- lm(log10(weight.mg) ~ Measurement, data = sub2)
+# summary(z)
+# anova(z)
+# plot(z)
+# plot(weight.mg ~ Measurement, data = sub2)
+# ## overall, sub2 weights greater after than before -- growth
 
 y <- lm(log(weight.mg) ~ log(CT.W), data = sub2)
 Anova(y)
@@ -152,69 +154,65 @@ ggplot(data=sub2, aes(x=CT.W, y = weight.mg))+
         axis.title = element_text(size = 20),
         axis.line = element_line(size = 1.1))
 
-sub2.after <- sub2[c(which(sub2$Measurement == "after")),]
 
-y3 <- lmer(resids ~ Treatment + Measurement + Treatment:Measurement + (1|Nest), data = sub2)
-summary(y3)
-Anova(y3)
+#### sub 2 effect sizes ####
+# sub2, before comparing treatments
+sub2.before <- sub2 %>% 
+  filter(Measurement == "before")
+
+y1 <- lmer(resids ~ Treatment + (1|Nest), data = sub2.before)
+Anova(y1, test.statistic = "F")
+
+sub2.p0 <- ggplot(data = sub2.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
+
+cohen.d(sub2.before$resids, sub2.before$Treatment)
+
+# sub2, after comparing treatments
+sub2.after <- sub2 %>% 
+  filter(Measurement == "after")
+cohen.d(sub2.after$resids, sub2.after$Treatment)
 
 y2 <- lmer(resids ~ Treatment + (1|Nest), data = sub2.after)
-Anova(y2)
-summary(y2)
-plot(resids ~ Treatment, data = sub2.after, ylab = "Body Condition Index", cex.axis = 1.5, cex.lab = 1.5)
+Anova(y2, test.statistic = "F")
 
-#compare variance
-leveneTest(y2)
+sub2.p1 <- ggplot(data = sub2.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
 
-# y3 <- lm(weight.mg ~ Treatment, data = sub2.after)
-# summary(y3)
-# plot(weight.mg ~ Treatment, data = sub2.after)
+# sub2, control, comparing before and after
+sub2.control <- sub2 %>% 
+  filter(Treatment == "Control")
+cohen.d(sub2.control$resids, sub2.control$Measurement)
 
-# x <- lm(weight.mg ~ PT.L, data = sub2)
-# summary(x)
-# plot(weight.mg ~ PT.L, data = sub2)
-# abline(x)
-# 
-# v <- lm(weight.mg ~ Treatment, data = sub2)
-# summary(z)
-# plot(weight.mg ~ Treatment, data = sub2)
+y3 <- lmer(resids ~ Measurement + (1|Nest), data = sub2.control)
+Anova(y3, test.statistic = "F")
 
-control <- sub2[c(which(sub2$Treatment == "Control")),]
-x <- lmer(resids ~ Measurement + (1|Nest), control)
-Anova(x)
-plot(resids ~ Measurement, control,
-     ylab = "Body Condition Index", cex.axis = 1.5, cex.lab = 1.5)
-## in control, body condition improved for sub2s -- growth
+sub2.p2 <- ggplot(data = sub2.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
 
-Fig2a <- ggplot(control, aes(x = Measurement, y = resids))+
-  geom_boxplot()+
-  theme_classic()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Residuals")
+# parasites, sub2, comparing before and after
+sub2.parasite <- sub2 %>% 
+  filter(Treatment == "Parasite")
+cohen.d(sub2.parasite$resids, sub2.parasite$Measurement)
+
+y4 <- lmer(resids ~ Measurement + (1|Nest), data = sub2.parasite)
+Anova(y4, test.statistic = "F")
+
+sub2.p3 <- ggplot(data = sub2.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
 
 
-parasite <- sub2[c(which(sub2$Treatment == "Parasite")),]
-x <- lmer(resids ~ Measurement + (1|Nest), parasite)
-Anova(x)
-plot(resids ~ Measurement, parasite,
-     ylab = "Body Condition Index", cex.axis = 1.5, cex.lab = 1.5)
-## in experimental treatment, body condition did not improve -- no growth -- slower time to moult?
-Fig2b <- ggplot(parasite, aes(x = Measurement, y = resids))+
-  geom_boxplot()+
-  theme_classic()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Residuals")
-
-Fig2c <- ggplot(sub2.after, aes(x = Treatment, y = resids))+
-  geom_boxplot()+
-  theme_classic()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Residuals")
-
-multiplot(Fig2a, Fig2b, Fig2c, cols = 3)
 ###### Sub 1 body condition #########
 setwd("/Volumes/straus/RProjects/FitnessEffects")
-sub1wts <- read.csv("sub1_weights.csv")
+sub1wts <- read.csv("../data/sub1_weights.csv")
 sub1wts$avg.wt <- (sub1wts$Weight / sub1wts$num.sub1)
 sub1wts.before <- sub1wts[c(which(sub1wts$Measurement == "before")),]
 sub1wts.after <- sub1wts[c(which(sub1wts$Measurement == "after")),]
@@ -222,40 +220,6 @@ sub1wts.after <- sub1wts[c(which(sub1wts$Measurement == "after")),]
 sub1 <- df_all[-c(which(df_all$instar != "Sub 1")),]
 sub1.before <- sub1[c(which(sub1$Measurement == "before")),]
 sub1.after <- sub1[c(which(sub1$Measurement == "after")),]
-
-# average weight to average ct.w
-
-# sub1wts.before$avg.CT.W <- (tapply(sub1.before$CT.W, sub1.before$Nest, mean))
-# sub1wts.after$avg.CT.W <- (tapply(sub1.after$CT.W, sub1.after$Nest, mean))
-# sub1.final <- rbind(sub1wts.after, sub1wts.before)
-# 
-# 
-# y <- lm(log(avg.wt) ~ log(avg.CT.W), data = sub1.final)
-# summary(y)
-# plot(log(avg.wt) ~ log(avg.CT.W), data = sub1.final)
-# abline(y)
-# sub1.final$resids <- residuals(y)
-# 
-# sub1.after <- sub1.final[c(which(sub1.final$Measurement == "after")),]
-# y2 <- lm(resids ~ Treatment, data = sub1.after)
-# summary(y2)
-# plot(resids ~ Treatment, data = sub1.after)
-# 
-# #compare variance
-# leveneTest(y2)
-# 
-# control <- sub1.final[c(which(sub1.final$Treatment == "Control")),]
-# anova(lm(resids ~ Measurement, control))
-# plot(resids ~ Measurement, control)
-# ## in control, body condition improved for sub1s -- growth
-# 
-# parasite <- sub1.final[c(which(sub1.final$Treatment == "Parasite")),]
-# anova(lm(resids ~ Measurement, parasite))
-# plot(resids ~ Measurement, parasite)
-# ## in experimental treatment, body condition did not improve -- no growth -- slower time to moult?
-# 
-# plot(resids ~ Measurement, parasite)
-# leveneTest(lm(resids ~ Measurement, parasite)) #var not diff
 
 #### sub average weight for each individual
 ## before
@@ -274,7 +238,7 @@ for(i in 1:length(sub1.after$Nest)){
 
 #sub1.before <- sub1.before[,-10]
 sub1.final <- rbind(sub1.after, sub1.before)
-# sub1.final$weight.mg <- sub1.final$weight.grams * 1000
+sub1.final$weight.mg <- sub1.final$weight.grams * 1000
 write.csv(sub1.final, "Sub1wts.csv")
 
 y <- lm(log(weight.mg) ~ log(CT.W), data = sub1.final)
@@ -298,72 +262,110 @@ ggplot(data=sub1.final, aes(x=CT.W, y = weight.mg))+
         axis.title = element_text(size = 20),
         axis.line = element_line(size = 1.1))
 
-sub1.after <- sub1.final[c(which(sub1.final$Measurement == "after")),]
+#### sub 1 effect sizes ####
+# sub1, before comparing treatments
+sub1.before <- sub1.final %>% 
+  filter(Measurement == "before")
+
+y1 <- lmer(resids ~ Treatment + (1|Nest), data = sub1.before)
+Anova(y1, test.statistic = "F")
+
+sub1.p0 <- ggplot(data = sub1.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
+
+cohen.d(sub1.before$resids, sub1.before$Treatment)
+
+# sub1, after comparing treatments
+sub1.after <- sub1.final %>% 
+  filter(Measurement == "after")
+cohen.d(sub1.after$resids, sub1.after$Treatment)
+
 y2 <- lmer(resids ~ Treatment + (1|Nest), data = sub1.after)
-Anova(y2)
+Anova(y2, test.statistic = "F")
 
-y3 <- lmer(resids ~ Treatment + Measurement + Treatment:Measurement + (1|Nest), data = sub1.final)
-Anova(y3)
-summary(y3)
+sub1.p1 <- ggplot(data = sub1.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
 
-Anova(y2)
-Anova(lm(resids ~ Treatment, sub1.after))
-summary(y2)
-plot(resids ~ Treatment, data = sub1.after, ylab = "Body Condition Index", cex.axis = 1.5, cex.lab = 1.5)
-# SIGNIFICANTLY DIFFERENT!!! ... but not when nest is a random effect...
+# sub1, control, comparing before and after
+sub1.control <- sub1.final %>% 
+  filter(Treatment == "Control")
+cohen.d(sub1.control$resids, sub1.control$Measurement)
 
-control <- sub1.final[c(which(sub1.final$Treatment == "Control")),]
-x <- lmer(resids ~ Measurement + (1|Nest), control)
-Anova(x)
-plot(resids ~ Measurement, control,
-     ylab = "Body Condition Index", cex.axis = 1.5, cex.lab = 1.5)
-## in control, body condition improved for sub1s -- growth
-Fig3a <- ggplot(control, aes(x = Measurement, y = resids))+
-  geom_boxplot()+
-  theme_classic()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Residuals")
+y3 <- lmer(resids ~ Measurement + (1|Nest), data = sub1.control)
+Anova(y3, test.statistic = "F")
 
-parasite <- sub1.final[c(which(sub1.final$Treatment == "Parasite")),]
-x <- lmer(resids ~ Measurement + (1|Nest), parasite)
-Anova(x)
-## in experimental treatment, also better, also growth
-plot(resids ~ Measurement, parasite,
-     ylab = "Body Condition Index", cex.axis = 1.5, cex.lab = 1.5)
-Fig3b <- ggplot(parasite, aes(x = Measurement, y = resids))+
-  geom_boxplot()+
-  theme_classic()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Residuals")
+sub1.p2 <- ggplot(data = sub1.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
 
-Fig3c <- ggplot(sub1.after, aes(x = Treatment, y = resids))+
-  geom_boxplot()+
-  theme_classic()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Residuals")
+# parasites, sub2, comparing before and after
+sub1.parasite <- sub1.final %>% 
+  filter(Treatment == "Parasite")
+cohen.d(sub1.parasite$resids, sub1.parasite$Measurement)
+
+y4 <- lmer(resids ~ Measurement + (1|Nest), data = sub1.parasite)
+Anova(y4, test.statistic = "F")
+
+sub1.p3 <- ggplot(data = sub1.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Body Condition Index")+
+  theme_cowplot()
 
 
-multiplot(Fig3a, Fig3b, Fig3c, cols = 3)
-## effect sizes?? 
-library(effsize)
-cohen.d(sub1.final$resids, sub1.final$Treatment)
+#### plots ####
+before.plots <- ggarrange(adult.p0, sub2.p0, sub1.p0, labels = c("Adult", "Sub 2", "Sub 1"), 
+                         label.x = c(0.13, 0.115, 0.1), label.y = 1, nrow = 1, common.legend = TRUE, legend = 'right')
+
+after.plots <- ggarrange(adult.p1, sub2.p1, sub1.p1, nrow = 1, common.legend = TRUE, legend = 'right')
+
+
+measurement.plots <- ggarrange(before.plots, after.plots, nrow = 2, labels=c("Before", "After"),
+                             label.x = -0.07, label.y = 0.8, common.legend = TRUE, legend = 'right')+
+  theme(plot.margin = margin(0.5, 0.5, 0.5, 1.5, "cm"))
+
+
+
+ggsave(after.plots, filename = "../figures/after.density.jpeg", dpi = "retina", 
+       units = "in", width = 14, height = 4.5)
+ggsave(measurement.plots, filename = "../figures/measurement.density.jpeg", dpi = "retina", 
+       units = "in", width = 12, height = 7)
+
+control.plots <- ggarrange(adult.p2, sub2.p2, sub1.p2, labels = c("Adult", "Sub 2", "Sub 1"), 
+                  label.x = c(-.13, -.14, -.13), label.y = 0.85, nrow = 3, 
+                  common.legend = TRUE, legend = 'right')+
+  theme(plot.margin = margin(0.5, 0.5, 0.5, 1.5, "cm")) 
+
+parasite.plots <-ggarrange(adult.p3, sub2.p3, sub1.p3, nrow = 3, 
+          common.legend = TRUE, legend = 'right') +
+  theme(plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm")) 
+
+
+treatment.plots <- ggarrange(control.plots, parasite.plots, nrow = 1, labels=c("Control", "Experimental"),
+                             label.x = 0.25, common.legend = TRUE, legend = 'right')+
+  theme(plot.margin = margin(0.5, 0.5, 0.5, 1.5, "cm"))
+
+ggsave(treatment.plots, filename = "../figures/treatments.density.jpeg", dpi = "retina", 
+       units = "in", width = 12, height = 12)
 
 ########### ALL body condition ##########
-df_all <- read.csv("eximius_body_measurements.csv")
+df_all <- read.csv("../data/eximius_body_measurements.csv")
 levels(df_all$Measurement)
 df_all$Measurement <- factor(df_all$Measurement, levels= c("before", "after"))
-df_all$weight.grams <- df_all$weight.grams * 1000
+df_all$weight.mg <- NULL
 
 df_all <- df_all[-c(which(df_all$instar == "Sub 1")),]
 sub1.final <- sub1.final[,-11]
 df_all <- rbind(df_all, sub1.final)
 
-# df_all$weight.mg <- df_all$weight.grams *1000
+df_all$weight.mg <- df_all$weight.grams *1000
 
 y <- lm(log(weight.mg) ~ log(CT.W), data = df_all)
 Anova(y)
-summary(y)
-plot(y)
 plot(log(weight.grams) ~ log(CT.W), data = df_all)
 abline(y)
 df_all$resids <- residuals(y)
@@ -428,6 +430,39 @@ Fig4c <- ggplot(df.after, aes(x = Treatment, y = resids))+
   ylab("Body Condition Residuals")
 
 multiplot(Fig4a, Fig4b, Fig4c, cols = 3)
+
+
+
+
+
+# all, after comparing treatments
+all.after <- df_all %>% 
+  filter(Measurement == "after")
+cohen.d(all.after$resids, all.after$Treatment)
+
+all.p1 <- ggplot(data = all.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
+  geom_density(alpha = 0.5)
+
+# all, control, comparing before and after
+all.control <- df_all %>% 
+  filter(Treatment == "Control")
+cohen.d(all.control$resids, all.control$Measurement)
+
+all.p2 <- ggplot(data = all.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
+  geom_density(alpha = 0.5)
+
+# parasites, all, comparing before and after
+all.parasite <- df_all %>% 
+  filter(Treatment == "Parasite")
+cohen.d(all.parasite$resids, all.parasite$Measurement)
+
+all.p3 <- ggplot(data = all.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
+  geom_density(alpha = 0.5)
+
+
+
+
+
 ############ Mortality ##########
 col.counts <- read.csv("colony_counts.csv")
 View(col.counts)
