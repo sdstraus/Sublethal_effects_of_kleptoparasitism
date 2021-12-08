@@ -11,19 +11,15 @@ library(tidyr)
 library(dplyr)
 library(ggpubr)
 
+setwd("/Users/sam/github/FitnessEffects/code")
 ######## ADULTS  ##########
 # body condition
 df_all <- read.csv("../data/eximius_body_measurements.csv")
 levels(df_all$Measurement)
 df_all$Measurement <- factor(df_all$Measurement, levels= c("before", "after"))
 
-# remove Col_21 : Note says "Escapees"
-df_all <- df_all %>% filter(Nest != "Col_21")
-
-
 adults <- df_all %>% filter(instar == "Adult")
 adults$weight.mg <- adults$weight.grams * 1000
-
 # 
 # hist(adults$weight.grams)
 # hist(sqrt(adults$weight.mg))
@@ -38,10 +34,12 @@ adults$weight.mg <- adults$weight.grams * 1000
 # adults.before <- adults[c(which(adults$Measurement == "before")),]
 
 y <- lm(log(weight.mg) ~ log(CT.W), data = adults)
-adults$resids <- residuals(y)
-
 Anova(y)
 summary(y)
+
+plot(log(weight.mg) ~ log(CT.W), data = adults)
+abline(y)
+adults$resids <- residuals(y)
 
 ggplot(data=adults, aes(x=CT.W, y = weight.mg))+
   geom_point()+
@@ -64,6 +62,7 @@ ggplot(data=adults, aes(x=CT.W, y = weight.mg))+
 # adults, before comparing treatments
 adults.before <- adults %>% 
   filter(Measurement == "before")
+
 
 y1 <- lmer(resids ~ Treatment + (1|Nest), data = adults.before)
 Anova(y1, test.statistic = "F")
@@ -119,26 +118,6 @@ adult.p3 <- ggplot(data = adults.parasite, aes(x = resids, group = Measurement, 
 
 
 
-
-# differences in residuals (before & after) between treatments
-
-ad.bf.col <- adults.before %>% 
-  group_by(Nest, Treatment) %>% 
-  summarize(before.res = mean(resids))
-
-ad.af.col <- adults.after %>% 
-  group_by(Nest, Treatment) %>% 
-  summarize(after.res = mean(resids))
-
-adults.col <- full_join(ad.bf.col, ad.af.col)
-adults.col$diff.resids <- adults.col$after.res - adults.col$before.res
-
-ggplot(data = adults.col, aes(x = Treatment, y = diff.resids))+
-  geom_boxplot()
-
-anova(lm(diff.resids ~ Treatment, data = adults.col)) # p=0.41
-
-
 ####### Sub 2 body condition ########
 levels(df_all$instar)
 #df_all <- read.csv("eximius_body_measurements.csv")
@@ -157,10 +136,11 @@ sub2$weight.mg <- sub2$weight.grams * 1000
 # ## overall, sub2 weights greater after than before -- growth
 
 y <- lm(log(weight.mg) ~ log(CT.W), data = sub2)
-sub2$resids <- residuals(y)
-
 Anova(y)
 summary(y)
+plot(log(weight.mg) ~ log(CT.W), data = sub2)
+abline(y)
+sub2$resids <- residuals(y)
 
 
 ggplot(data=sub2, aes(x=CT.W, y = weight.mg))+
@@ -196,7 +176,6 @@ cohen.d(sub2.before$resids, sub2.before$Treatment)
 # sub2, after comparing treatments
 sub2.after <- sub2 %>% 
   filter(Measurement == "after")
-
 cohen.d(sub2.after$resids, sub2.after$Treatment)
 
 y2 <- lmer(resids ~ Treatment + (1|Nest), data = sub2.after)
@@ -210,7 +189,6 @@ sub2.p1 <- ggplot(data = sub2.after, aes(x = resids, group = Treatment, fill = T
 # sub2, control, comparing before and after
 sub2.control <- sub2 %>% 
   filter(Treatment == "Control")
-
 cohen.d(sub2.control$resids, sub2.control$Measurement)
 
 y3 <- lmer(resids ~ Measurement + (1|Nest), data = sub2.control)
@@ -236,74 +214,43 @@ sub2.p3 <- ggplot(data = sub2.parasite, aes(x = resids, group = Measurement, fil
 
 
 
-# differences in residuals (before & after) between treatments
-
-s2.bf.col <- sub2.before %>% 
-  group_by(Nest, Treatment) %>% 
-  summarize(before.res = mean(resids))
-
-s2.af.col <- sub2.after %>% 
-  group_by(Nest, Treatment) %>% 
-  summarize(after.res = mean(resids))
-
-sub2.col <- full_join(s2.bf.col, s2.af.col)
-sub2.col$diff.resids <- sub2.col$after.res - sub2.col$before.res
-
-ggplot(data = sub2.col, aes(x = Treatment, y = diff.resids))+
-  geom_boxplot()
-
-anova(lm(diff.resids ~ Treatment, data = sub2.col)) # p=0.051
 
 ###### Sub 1 body condition #########
+sub1wts <- read.csv("../data/sub1_weights.csv")
+sub1wts$avg.wt <- (sub1wts$Weight / sub1wts$num.sub1)
+sub1wts.before <- sub1wts[c(which(sub1wts$Measurement == "before")),]
+sub1wts.after <- sub1wts[c(which(sub1wts$Measurement == "after")),]
 
-# !! keep, important code but don't need to rerun every time !!
+sub1 <- df_all[-c(which(df_all$instar != "Sub 1")),]
+sub1.before <- sub1[c(which(sub1$Measurement == "before")),]
+sub1.after <- sub1[c(which(sub1$Measurement == "after")),]
 
-# sub1wts <- read.csv("../data/sub1_weights.csv")
-# sub1wts$avg.wt <- (sub1wts$Weight / sub1wts$num.sub1)
-# sub1wts.before <- sub1wts[c(which(sub1wts$Measurement == "before")),]
-# sub1wts.after <- sub1wts[c(which(sub1wts$Measurement == "after")),]
-# 
-# sub1 <- df_all[-c(which(df_all$instar != "Sub 1")),]
-# sub1.before <- sub1[c(which(sub1$Measurement == "before")),]
-# sub1.after <- sub1[c(which(sub1$Measurement == "after")),]
-# 
-# #### sub average weight for each individual
-# ## before
-# for(i in 1:length(sub1.before$Nest)){
-#   for(j in 1:length(sub1wts.before$Nest)){
-#       if(sub1.before$Nest[i] == sub1wts.before$Nest[j]){
-#     sub1.before$weight.grams[i] <- sub1wts.before$avg.wt[j]
-#       }}}
-# 
-# ## after
-# for(i in 1:length(sub1.after$Nest)){
-#   for(j in 1:length(sub1wts.after$Nest)){
-#     if(sub1.after$Nest[i] == sub1wts.after$Nest[j]){
-#       sub1.after$weight.grams[i] <- sub1wts.after$avg.wt[j]
-#     }}}
-# 
-# #sub1.before <- sub1.before[,-10]
-# sub1.final <- rbind(sub1.after, sub1.before)
-# sub1.final$weight.mg <- sub1.final$weight.grams * 1000
-# write.csv(sub1.final, "../data/Sub1wts.csv", row.names = FALSE)
+#### sub average weight for each individual
+## before
+for(i in 1:length(sub1.before$Nest)){
+  for(j in 1:length(sub1wts.before$Nest)){
+      if(sub1.before$Nest[i] == sub1wts.before$Nest[j]){
+    sub1.before$weight.grams[i] <- sub1wts.before$avg.wt[j]
+      }}}
 
-### !! ^^ keep, important code, but don't need to rerun !! ## 
+## after
+for(i in 1:length(sub1.after$Nest)){
+  for(j in 1:length(sub1wts.after$Nest)){
+    if(sub1.after$Nest[i] == sub1wts.after$Nest[j]){
+      sub1.after$weight.grams[i] <- sub1wts.after$avg.wt[j]
+    }}}
 
-sub1.final <- read.csv("../data/Sub1wts.csv")
-
-# remove colony 21
-sub1.final <- sub1.final %>% filter(Nest != "Col_21")
-
-sub1.final$Measurement <- factor(sub1.final$Measurement, levels = c("before", "after"))
+#sub1.before <- sub1.before[,-10]
+sub1.final <- rbind(sub1.after, sub1.before)
+sub1.final$weight.mg <- sub1.final$weight.grams * 1000
+write.csv(sub1.final, "Sub1wts.csv")
 
 y <- lm(log(weight.mg) ~ log(CT.W), data = sub1.final)
-sub1.final$resids <- residuals(y)
-
 Anova(y)
 summary(y)
 plot(log(weight.grams) ~ log(CT.W), data = sub1.final)
 abline(y)
-
+sub1.final$resids <- residuals(y)
 
 ggplot(data=sub1.final, aes(x=CT.W, y = weight.mg))+
   geom_point()+
@@ -337,7 +284,6 @@ cohen.d(sub1.before$resids, sub1.before$Treatment)
 # sub1, after comparing treatments
 sub1.after <- sub1.final %>% 
   filter(Measurement == "after")
-
 cohen.d(sub1.after$resids, sub1.after$Treatment)
 
 y2 <- lmer(resids ~ Treatment + (1|Nest), data = sub1.after)
@@ -376,46 +322,6 @@ sub1.p3 <- ggplot(data = sub1.parasite, aes(x = resids, group = Measurement, fil
 
 
 
-# differences in residuals (before & after) between treatments
-
-s1.bf.col <- sub1.before %>% 
-  group_by(Nest, Treatment) %>% 
-  summarize(before.res = mean(resids))
-
-s1.af.col <- sub1.after %>% 
-  group_by(Nest, Treatment) %>% 
-  summarize(after.res = mean(resids))
-
-sub1.col <- full_join(s1.bf.col, s1.af.col)
-sub1.col$diff.resids <- sub1.col$after.res - sub1.col$before.res
-
-ggplot(data = sub1.col, aes(x = Treatment, y = diff.resids))+
-  geom_boxplot()
-
-anova(lm(diff.resids ~ Treatment, data = sub1.col)) # p=0.30
-
-
-adults.col$instar <- "Adult"
-sub2.col$instar <- "Sub 2"
-sub1.col$instar <- "Sub 1"
-
-all.col <- rbind(adults.col, sub2.col, sub1.col)
-anova(lm(diff.resids ~ instar + Treatment+instar:Treatment, data = all.col)) # p=0.06
-anova(lm(diff.resids ~ instar + Treatment, data = all.col)) # p=0.06
-summary(lm(diff.resids ~ instar + Treatment, data = all.col))
-
-all.col$instar <- factor(all.col$instar, order = TRUE, levels = c("Sub 1", "Sub 2", "Adult"))
-
-
-ggplot(data = all.col, aes(x = instar, y = diff.resids, color = Treatment, fill = instar))+
-  geom_boxplot()+
-  geom_hline(yintercept = 0, color = 'red')+
-  theme_classic()+
-  scale_color_manual(values = c("black", "darkgrey"))+
-  theme(text = element_text(size=20))+
-  ylab("BCI difference")
-
-
 #### plots ####
 before.plots <- ggarrange(adult.p0, sub2.p0, sub1.p0, labels = c("Adult", "Sub 2", "Sub 1"), 
                          label.x = c(0.13, 0.115, 0.1), label.y = 1, nrow = 1, common.legend = TRUE, legend = 'right')
@@ -452,15 +358,24 @@ ggsave(treatment.plots, filename = "../figures/treatments.density.jpeg", dpi = "
        units = "in", width = 12, height = 12)
 
 ########### ALL body condition ##########
+df_all <- read.csv("../data/eximius_body_measurements.csv")
+levels(df_all$Measurement)
+df_all$Measurement <- factor(df_all$Measurement, levels= c("before", "after"))
+df_all$weight.mg <- NULL
 
-df_new <- rbind(adults, sub2, sub1.final)
+df_all <- df_all[-c(which(df_all$instar == "Sub 1")),]
+sub1.final <- sub1.final[,-11]
+df_all <- rbind(df_all, sub1.final)
 
-y <- lm(log(weight.mg) ~ log(CT.W), data = df_new)
-df_new$resids <- residuals(y)
+df_all$weight.mg <- df_all$weight.grams *1000
+
+y <- lm(log(weight.mg) ~ log(CT.W), data = df_all)
 Anova(y)
+plot(log(weight.grams) ~ log(CT.W), data = df_all)
+abline(y)
+df_all$resids <- residuals(y)
 
-
-ggplot(data=df_new, aes(x=CT.W, y = weight.mg))+
+ggplot(data=df_all, aes(x=CT.W, y = weight.mg))+
   geom_point()+
   geom_smooth(method = "lm")+
   xlab("Cephalothorax Width (mm)")+
@@ -474,21 +389,6 @@ ggplot(data=df_new, aes(x=CT.W, y = weight.mg))+
         axis.title = element_text(size = 20),
         axis.line = element_line(size = 1.1))
 
-# order instar
-df_new$instar <- factor(df_new$instar, order = TRUE, levels = c("Sub 1", "Sub 2", "Adult"))
-
-# mega model
-full.mod <- lmer(resids ~ Treatment + Measurement + Treatment:Measurement + (1|instar) + (1|Nest), data = df_new)
-Anova(full.mod, test.statistic = "F")
-summary(full.mod)
-
-
-ggplot(full.mod, aes(x = Treatment, y = resids, color = Measurement, fill = instar))+
-  geom_boxplot()+
-  theme_classic()+
-  scale_color_manual(values = c("black", "darkgrey"))+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Index")
 
 control <- df_all[c(which(df_all$Treatment == "Control")),]
 x <- lmer(resids ~ Measurement + instar+ (1|Nest), control)
@@ -569,113 +469,31 @@ all.p3 <- ggplot(data = all.parasite, aes(x = resids, group = Measurement, fill 
 
 
 ############ Mortality ##########
-col.counts <- read.csv("../data/colony_counts.csv")
-
-# remove Col_21 : Note says "Escapees"
-col.counts <- col.counts %>% filter(Colony != "Col_21")
-
-
+col.counts <- read.csv("colony_counts.csv")
 View(col.counts)
 col.counts$num.all <- col.counts$num.adult + col.counts$num.sub2 + col.counts$num.sub1
 num.after <- col.counts[c(which(col.counts$Measurement == "After")),]
 
-num.after[,7] <- NULL
-
-x <- lm(num.adult ~ Treatment, data =num.after)
-x.2 <- glm(num.adult ~ Treatment, data =num.after, family = poisson(link = "identity"))
-AIC(x, x.2)
-Anova(x.2)
-plot(num.adult ~ Treatment, num.after, ylab = "Number Adults", cex.axis = 1.5, cex.lab = 1.5)
-cohen.d(num.after$num.adult, num.after$Treatment)
+x <- glm(num.adult ~ Treatment, family = poisson, num.after)
+Anova(x)
+plot(num.adult ~ Treatment, num.after, ylab = "Number survivors", cex.axis = 1.5, cex.lab = 1.5)
 # diff in variance
+leveneTest(x, center = mean) #YES sig difference in variance
 
-y <- lm(num.sub2 ~ Treatment, data = num.after)
-y.2 <- glm(num.sub2 ~ Treatment, data = num.after, family = poisson(link = "identity"))
-AIC(y, y.2)
-Anova(y.2)
-plot(num.sub2 ~ Treatment, num.after, ylab = "Number Sub 2", cex.axis = 1.5, cex.lab = 1.5)  #...higher?
-cohen.d(num.after$num.sub2, num.after$Treatment)
+y <- glm(num.sub2 ~ Treatment, family= poisson, data = num.after)
+Anova(y)
+plot(num.sub2 ~ Treatment, num.after, ylab = "Number survivors", cex.axis = 1.5, cex.lab = 1.5)  #...higher?
+leveneTest(y, center = mean)
 
-z <- glm(num.sub1 ~ Treatment, data =  num.after, family = poisson(link = "identity"))
+z <- glm(num.sub1 ~ Treatment, family = poisson, num.after)
 Anova(z)
-plot(num.sub1 ~ Treatment, num.after, ylab = "Number Sub 1", cex.axis = 1.5, cex.lab = 1.5)
-cohen.d(num.after$num.sub1, num.after$Treatment)
+plot(num.sub1 ~ Treatment, num.after, ylab = "Number survivors", cex.axis = 1.5, cex.lab = 1.5)
+leveneTest(z, center = mean)
 
-w <- glm(num.all ~ Treatment, data = num.after, family = poisson(link = "identity"))
+w <- glm(num.all ~ Treatment, family = poisson, num.after)
 Anova(w)
-plot(num.all ~ Treatment, num.after, ylab = "Total Number", cex.axis = 1.5, cex.lab = 1.5)
-cohen.d(num.after$num.all, num.after$Treatment)
-
-# make num.after long format
-num.long <- num.after %>%
-  pivot_longer(!c(Colony, Treatment, Measurement), names_to = "instar", values_to = "count")
-
-num.long <- num.long %>% mutate(instar = recode_factor(instar, num.sub1  = "Sub 1", num.sub2 = "Sub 2", num.adult = "Adult"))
-num.long$instar <- factor(num.long$instar, order = TRUE, levels = c("Sub 1", "Sub 2", "Adult"))
-
-ggplot(data = filter(num.long, instar != "num.all"), aes(x = count, group = instar, fill = instar)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Count")+
-  theme_cowplot()
-
-hist(num.after$num.adult)
-hist(num.after$num.sub1)
-hist(num.after$num.sub2)
-
-num.long <-  num.long %>% filter(instar != "num.all")
-
-instar.count <- glm(count ~ instar, data = num.long, family = poisson(link = "identity"))
-Anova(instar.count)
-summary(instar.count)
-
-mod.av <- aov(instar.count)
-TUKEY <- TukeyHSD(x=mod.av)
-sig.letters <- TUKEY$instar[order(row.names(TUKEY$instar)), ]
-
-value_max = num.long %>% group_by(instar) %>% summarize(max_value = max(count))
-ggplot(data = filter(num.long, instar != "num.all"), aes(x = instar, y = count, fill = instar)) + 
-  geom_boxplot(alpha = 0.5)+
-  geom_text(data = value_max, aes(x = instar, y = max_value + 1, label = c("a", "ab", "b")) ,vjust=0)+
-  xlab("Instar")+
-  theme_cowplot()+
-  stat_summary(fun=mean, geom="point", size=2, color="red")+
-  theme(legend.position = "none")
-
-# compare total number in after with instar specific body condition
-
-# only looking at after
-avg_BCI_after <- df_new %>% filter(Measurement == "after") %>% 
-  group_by(Nest) %>% 
-  summarise(BCI = mean(resids))
-
-num.bci.after <- left_join(num.after, avg_BCI_after, by = c("Colony" = "Nest"))
-
-bci.m1 <- lmer(BCI ~ num.all, data = num.bci.after)
-summary(bci.m1)
-plot(BCI ~ num.all, data = num.bci.after)
-
-bci.m1.5 <- lm(BCI ~ num.all + I(num.all ^ 2), data = num.bci.after)
-summary(bci.m1.5)
-
-AIC(bci.m1, bci.m1.5) # quadratic preferred
-
-bci.m2 <- lm(BCI ~ num.all + Treatment, data = num.bci.after)
-summary(bci.m2)
-
-bci.m3 <- lmer(BCI ~ Treatment, data = num.bci.after)
-summary(bci.m3)
-Anova(bci.m3)
-plot(BCI ~ Treatment, data = num.bci.after)
-cohen.d(num.bci.after$BCI, num.bci.after$Treatment)
-
-ggplot(num.bci.after, aes(x = Treatment, y = BCI))+
-  geom_boxplot()+
-  geom_jitter(shape=16, position=position_jitter(0.1))+
-  stat_summary(fun=mean, geom="point", size=2, color="red")+
-  theme_cowplot()+
-  theme(text = element_text(size=20))+
-  ylab("Body Condition Index")
-
+plot(num.all ~ Treatment, num.after, ylab = "Number survivors", cex.axis = 1.5, cex.lab = 1.5)
+leveneTest(w, center = mean)
 
 ########### Find Lambda ##########
 # classic ecology uses lambda for discreet population growth rate
@@ -708,6 +526,3 @@ plot(lambda.sub2 ~ Treatment.After, wide.col.counts)
 z <- lm(lambda.sub1 ~ Treatment.After, wide.col.counts)
 Anova(z)
 plot(lambda.sub1 ~ Treatment.After, wide.col.counts)
-
-
-
