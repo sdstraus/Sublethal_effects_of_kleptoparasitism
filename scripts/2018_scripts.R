@@ -11,6 +11,8 @@ library(tidyr)
 library(dplyr)
 library(ggpubr)
 
+setwd("/Users/sam/github/FitnessEffects/scripts")
+
 ######## ADULTS  ##########
 # body condition
 df_all <- read.csv("../data/eximius_body_measurements.csv")
@@ -43,7 +45,7 @@ adults$resids <- residuals(y)
 Anova(y)
 summary(y)
 
-ggplot(data=adults, aes(x=CT.W, y = weight.mg))+
+adult.resid.plot <- ggplot(data=adults, aes(x=CT.W, y = weight.mg))+
   geom_point()+
   geom_smooth(method = "lm")+
   xlab("Cephalothorax Width (mm)")+
@@ -53,9 +55,9 @@ ggplot(data=adults, aes(x=CT.W, y = weight.mg))+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x)))+
   theme_classic()+
-  theme(axis.text = element_text(size = 20, color = "black"),
-        axis.title = element_text(size = 20),
-        axis.line = element_line(size = 1.1))
+  theme(axis.text = element_text(size = 16, color = "black"),
+        axis.title = element_text(size = 16),
+        axis.line = element_line(size = 1.0))
 
 
 
@@ -138,6 +140,7 @@ ggplot(data = adults.col, aes(x = Treatment, y = diff.resids))+
 
 anova(lm(diff.resids ~ Treatment, data = adults.col)) # p=0.41
 
+cohen.d(adults.col$diff.resids ~ adults.col$Treatment) #small
 
 ####### Sub 2 body condition ########
 levels(df_all$instar)
@@ -163,7 +166,7 @@ Anova(y)
 summary(y)
 
 
-ggplot(data=sub2, aes(x=CT.W, y = weight.mg))+
+sub2.resid.plot <- ggplot(data=sub2, aes(x=CT.W, y = weight.mg))+
   geom_point()+
   geom_smooth(method = "lm")+
   xlab("Cephalothorax Width (mm)")+
@@ -173,9 +176,9 @@ ggplot(data=sub2, aes(x=CT.W, y = weight.mg))+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x)))+
   theme_classic()+
-  theme(axis.text = element_text(size = 20, color = "black"),
-        axis.title = element_text(size = 20),
-        axis.line = element_line(size = 1.1))
+  theme(axis.text = element_text(size = 16, color = "black"),
+        axis.title = element_text(size = 16),
+        axis.line = element_line(size = 1.0))
 
 
 #### sub 2 effect sizes ####
@@ -253,6 +256,7 @@ ggplot(data = sub2.col, aes(x = Treatment, y = diff.resids))+
   geom_boxplot()
 
 anova(lm(diff.resids ~ Treatment, data = sub2.col)) # p=0.051
+cohen.d(sub2.col$diff.resids, sub2.col$Treatment, na.rm = TRUE) #medium
 
 ###### Sub 1 body condition #########
 
@@ -305,7 +309,7 @@ plot(log(weight.grams) ~ log(CT.W), data = sub1.final)
 abline(y)
 
 
-ggplot(data=sub1.final, aes(x=CT.W, y = weight.mg))+
+sub1.resid.plot <- ggplot(data=sub1.final, aes(x=CT.W, y = weight.mg))+
   geom_point()+
   geom_smooth(method = "lm")+
   xlab("Cephalothorax Width (mm)")+
@@ -315,9 +319,14 @@ ggplot(data=sub1.final, aes(x=CT.W, y = weight.mg))+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x)))+
   theme_classic()+
-  theme(axis.text = element_text(size = 20, color = "black"),
-        axis.title = element_text(size = 20),
-        axis.line = element_line(size = 1.1))
+  theme(axis.text = element_text(size = 16, color = "black"),
+        axis.title = element_text(size = 16),
+        axis.line = element_line(size = 1.0))
+
+resid.plots <- ggarrange(adult.resid.plot, sub2.resid.plot, sub1.resid.plot, labels = "auto", nrow = 1)
+ggsave(resid.plots, filename = "figures/resid.plots.jpeg", dpi = "retina",
+       width = 12, height = 4, units = "in")
+
 
 #### sub 1 effect sizes ####
 # sub1, before comparing treatments
@@ -364,7 +373,7 @@ sub1.p2 <- ggplot(data = sub1.control, aes(x = resids, group = Measurement, fill
 # parasites, sub2, comparing before and after
 sub1.parasite <- sub1.final %>% 
   filter(Treatment == "Parasite")
-cohen.d(sub1.parasite$resids, sub1.parasite$Measurement)
+effsize::cohen.d(sub1.parasite$resids, sub1.parasite$Measurement)
 
 y4 <- lmer(resids ~ Measurement + (1|Nest), data = sub1.parasite)
 Anova(y4, test.statistic = "F")
@@ -393,7 +402,7 @@ ggplot(data = sub1.col, aes(x = Treatment, y = diff.resids))+
   geom_boxplot()
 
 anova(lm(diff.resids ~ Treatment, data = sub1.col)) # p=0.30
-
+cohen.d(sub1.col$diff.resids, sub1.col$Treatment) #medium
 
 adults.col$instar <- "Adult"
 sub2.col$instar <- "Sub 2"
@@ -406,15 +415,26 @@ summary(lm(diff.resids ~ instar + Treatment, data = all.col))
 
 all.col$instar <- factor(all.col$instar, order = TRUE, levels = c("Sub 1", "Sub 2", "Adult"))
 
+my_pal <- RColorBrewer::brewer.pal(n=3, name = "Dark2")
+scales::show_col(viridis_pal(option = "C")(4))
+my_pal <- viridis(option = "C", n = 4)
+my_pal <- my_pal[c(4,3,2,1)]
 
-ggplot(data = all.col, aes(x = instar, y = diff.resids, color = Treatment, fill = instar))+
-  geom_boxplot()+
+diff.plot <- ggplot(data = all.col, aes(x = instar, y = diff.resids, color = Treatment,                          fill = instar))+
+  geom_boxplot(alpha = 0.7)+
+  # geom_jitter(aes(group = Treatment))+
   geom_hline(yintercept = 0, color = 'red')+
   theme_classic()+
   scale_color_manual(values = c("black", "darkgrey"))+
+  scale_fill_manual(values = c(paste(my_pal[2:4])))+
   theme(text = element_text(size=20))+
-  ylab("BCI difference")
+  ylab(expression(paste(Delta~"BCI")))+
+  xlab("Instar")+
+  labs(color = "Treatment", fill = "Instar")
 
+ggsave(diff.plot, filename = "figures/diff_plot.jpeg", dpi = "retina", width = 10, height = 5.5, units = "in")
+
+anova(lm(diff.resids ~ Treatment, data = all.col)) # p=0.06
 
 #### plots ####
 before.plots <- ggarrange(adult.p0, sub2.p0, sub1.p0, labels = c("Adult", "Sub 2", "Sub 1"), 
@@ -483,7 +503,7 @@ Anova(full.mod, test.statistic = "F")
 summary(full.mod)
 
 
-ggplot(full.mod, aes(x = Treatment, y = resids, color = Measurement, fill = instar))+
+ggplot(df_new, aes(x = Treatment, y = resids, color = Measurement, fill = instar))+
   geom_boxplot()+
   theme_classic()+
   scale_color_manual(values = c("black", "darkgrey"))+
@@ -502,7 +522,7 @@ Fig4a <- ggplot(control, aes(x = Measurement, y = resids))+
   theme(text = element_text(size=20))+
   ylab("Body Condition Residuals")
 
-parasite <- df_all[c(which(df_all$Treatment == "Parasite")),]
+parasite <- df_new[c(which(df_all$Treatment == "Parasite")),]
 x <- lmer(resids ~ Measurement + (1|Nest), parasite)
 Anova(x)
 plot(resids ~ Measurement, parasite,
@@ -514,7 +534,7 @@ Fig4b <- ggplot(parasite, aes(x = Measurement, y = resids))+
   theme(text = element_text(size=20))+
   ylab("Body Condition Residuals")
 
-df.after <- df_all[c(which(df_all$Measurement == "after")),]
+df.after <- df_new[c(which(df_new$Measurement == "after")),]
 
 
 y2 <- lmer(resids ~ Treatment + (1|Nest), data = df.after)
@@ -581,12 +601,64 @@ num.after <- col.counts[c(which(col.counts$Measurement == "After")),]
 
 num.after[,7] <- NULL
 
-x <- lm(num.adult ~ Treatment, data =num.after)
+
+x <- lm(num.all ~ Treatment + Measurement + Treatment:Measurement, data = col.counts)
+summary(x)
+anova(x)
+
+# create proportion columns
+col.counts <- col.counts %>% 
+  mutate(prop.adults = (num.adult/num.all),
+         prop.sub2 = (num.sub2/num.all),
+         prop.sub1 = (num.sub1/num.all)) %>% 
+  mutate(prop.all = prop.adults + prop.sub2 + prop.sub1)
+
+# need to re-order df
+col.props <- col.counts[c(1,5,6,9:11)]
+
+col.props.long <- col.props %>% pivot_longer(!c(Colony, Treatment, Measurement), names_to = "instar", values_to = "proportion")
+col.props.long <- col.props.long %>% 
+  mutate(instar = as.factor(instar))
+levels(col.props.long$instar) <- c("Adult", "Sub2", "Sub1")
+col.props.long$instar <- ordered(col.props.long$instar, levels = c("Sub1", "Sub2", "Adult"))
+
+
+# ordinal logistic regression
+library(MASS)
+mod <- polr(instar ~ proportion*Treatment + proportion*Measurement, 
+            data = col.props.long, Hess = TRUE)
+summary(mod)
+
+
+mod2 <- lm(proportion ~ instar + Treatment:Measurement + instar:Treatment:Measurement, data = col.props.long)
+summary(mod2)
+anova(mod2)
+
+
+col.props.long.after <- col.props.long %>% filter(Measurement == "After")
+mean(col.props.long.after$proportion)
+sd(col.props.long.after$proportion)
+
+col.props.long.after %>% filter(Treatment == "Parasite") %>% summarize(mean(proportion))
+col.props.long.after %>% filter(Treatment == "Control") %>% summarize(mean(proportion))
+sd(col.props.long.after$proportion)
+
+mod3 <- lm(proportion ~ instar + Measurement, 
+           data = col.props.long)
+summary(mod3)
+anova(mod3)
+
+mod4 <- glm(proportion ~ Treatment, 
+           data = col.props.long.after, family = binomial)
+summary(mod4)
+anova(mod4)
+Anova(mod4)
+
 x.2 <- glm(num.adult ~ Treatment, data =num.after, family = poisson(link = "identity"))
 AIC(x, x.2)
 Anova(x.2)
 plot(num.adult ~ Treatment, num.after, ylab = "Number Adults", cex.axis = 1.5, cex.lab = 1.5)
-cohen.d(num.after$num.adult, num.after$Treatment)
+effsize::cohen.d(num.after$num.adult, num.after$Treatment)
 # diff in variance
 
 y <- lm(num.sub2 ~ Treatment, data = num.after)
@@ -599,12 +671,12 @@ cohen.d(num.after$num.sub2, num.after$Treatment)
 z <- glm(num.sub1 ~ Treatment, data =  num.after, family = poisson(link = "identity"))
 Anova(z)
 plot(num.sub1 ~ Treatment, num.after, ylab = "Number Sub 1", cex.axis = 1.5, cex.lab = 1.5)
-cohen.d(num.after$num.sub1, num.after$Treatment)
+effsize::cohen.d(num.after$num.sub1, num.after$Treatment)
 
 w <- glm(num.all ~ Treatment, data = num.after, family = poisson(link = "identity"))
 Anova(w)
 plot(num.all ~ Treatment, num.after, ylab = "Total Number", cex.axis = 1.5, cex.lab = 1.5)
-cohen.d(num.after$num.all, num.after$Treatment)
+effsize::cohen.d(num.after$num.all, num.after$Treatment)
 
 # make num.after long format
 num.long <- num.after %>%
@@ -624,7 +696,7 @@ hist(num.after$num.sub2)
 
 num.long <-  num.long %>% filter(instar != "num.all")
 
-instar.count <- glm(count ~ instar, data = num.long, family = poisson(link = "identity"))
+instar.count <- glm(count ~ instar + Treatment + instar:Treatment, data = num.long, family = poisson(link = "identity"))
 Anova(instar.count)
 summary(instar.count)
 
@@ -633,15 +705,93 @@ TUKEY <- TukeyHSD(x=mod.av)
 sig.letters <- TUKEY$instar[order(row.names(TUKEY$instar)), ]
 
 value_max = num.long %>% group_by(instar) %>% summarize(max_value = max(count))
-ggplot(data = filter(num.long, instar != "num.all"), aes(x = instar, y = count, fill = instar)) + 
-  geom_boxplot(alpha = 0.5)+
-  geom_text(data = value_max, aes(x = instar, y = max_value + 1, label = c("a", "ab", "b")) ,vjust=0)+
-  xlab("Instar")+
-  theme_cowplot()+
-  stat_summary(fun=mean, geom="point", size=2, color="red")+
-  theme(legend.position = "none")
 
+my_pal <- viridis::viridis(option = "C", n = 4)
+my_pal <- my_pal[c(4,3,2,1)]
+
+final.count <- ggplot(data = filter(num.long, instar != "num.all"), aes(x = instar, y = count, fill = instar, color = Treatment)) + 
+  geom_boxplot(alpha = 0.7)+
+  # geom_text(data = value_max, aes(x = instar, y = max_value + 1, label = c("a", "ab", "b")) ,vjust=0)+
+  xlab("Instar")+
+  scale_color_manual(values = c("black", "grey"))+
+  scale_fill_manual(values = paste(my_pal[2:4]))+
+  theme_cowplot()+
+  labs(fill = "Instar", y = "Final count")
+  # stat_summary(fun=mean, geom="point", size=2, color="red")
+  # theme(legend.position = "none")
+
+ggsave(final.count, filename = "figures/count_plot.jpeg", dpi = "retina", width = 7.5, height = 4.5, units = "in")
+
+
+### count diff
+View(col.counts)
+col.counts[,7] <- NULL
+
+counts.wide <- col.counts %>% 
+  pivot_wider(values_from = c(num.adult, num.sub2, num.sub1), names_from = c(Measurement))
+# i could not get this to work
+
+after <- col.counts %>% filter(Measurement == "After")
+after <- after[,1:5]
+after <- after %>% 
+  rename(after.adult = num.adult,
+         after.sub2 = num.sub2,
+         after.sub1 = num.sub1)
+
+before <- col.counts %>% filter(Measurement == "Before")
+before <- before[,1:5]
+before <- before %>% 
+  rename(before.adult = num.adult,
+         before.sub2 = num.sub2,
+         before.sub1 = num.sub1)
+
+counts.wide <- full_join(after, before)
+counts.wide <- counts.wide %>% 
+  mutate(diff.adult = after.adult - before.adult,
+         diff.sub2 = after.sub2 - before.sub2,
+         diff.sub1 = after.sub1 - before.sub1)
+
+counts.wide <- counts.wide %>% 
+  rename(Adult = diff.adult,
+         Sub2 = diff.sub2, 
+         Sub1 = diff.sub1)
+
+counts.long <- counts.wide %>%
+  select(Colony, Treatment, Adult, Sub2, Sub1) %>% 
+  pivot_longer(!c(Colony, Treatment), names_to = "instar", values_to = "count.diff")
+
+anova(lm(count.diff ~ instar + Treatment+instar:Treatment, data = counts.long)) # p=0.06
+anova(lm(count.diff ~ instar + Treatment, data = counts.long)) # p=0.06
+summary(lm(count.diff ~ instar + Treatment+ Treatment+instar:Treatment, data = counts.long))
+
+counts.long$instar <- factor(counts.long$instar, order = TRUE, levels = c("Sub1", "Sub2", "Adult"))
+
+my_pal <- viridis::viridis(option = "C", n = 4)
+my_pal <- my_pal[c(4,3,2,1)]
+
+diff.count <- ggplot(data = counts.long, aes(x = instar, y = count.diff, fill = instar, 
+                                             color = Treatment)) + 
+  geom_boxplot(alpha = 0.7)+
+  # geom_text(data = value_max, aes(x = instar, y = max_value + 1, label = c("a", "ab", "b")) ,vjust=0)+
+  xlab("Instar")+
+  scale_color_manual(values = c("black", "grey"))+
+  scale_fill_manual(values = paste(my_pal[2:4]))+
+  theme_cowplot()+
+  labs(fill = "Instar", y = "Final count")
+# stat_summary(fun=mean, geom="point", size=2, color="red")
+# theme(legend.position = "none")
 # compare total number in after with instar specific body condition
+
+
+# diff by instar
+num.adult <- counts.long %>% filter(instar == "Adult")
+anova(lm(count.diff ~ Treatment, data = num.adult)) #0.7121
+
+num.sub2 <- counts.long %>% filter(instar == "Sub2")
+anova(lm(count.diff ~ Treatment, data = num.sub2)) #0.08
+
+num.sub1 <- counts.long %>% filter(instar == "Sub1")
+anova(lm(count.diff ~ Treatment, data = num.sub1)) #0.229
 
 # only looking at after
 avg_BCI_after <- df_new %>% filter(Measurement == "after") %>% 
