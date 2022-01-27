@@ -602,9 +602,10 @@ num.after <- col.counts[c(which(col.counts$Measurement == "After")),]
 num.after[,7] <- NULL
 
 
-x <- lm(num.all ~ Treatment + Measurement + Treatment:Measurement, data = col.counts)
+x <- lmer(num.all ~ Treatment + Measurement + Treatment*Measurement + (1|Colony), data = col.counts)
 summary(x)
 anova(x)
+Anova(x)
 
 # create proportion columns
 col.counts <- col.counts %>% 
@@ -623,17 +624,36 @@ levels(col.props.long$instar) <- c("Adult", "Sub2", "Sub1")
 col.props.long$instar <- ordered(col.props.long$instar, levels = c("Sub1", "Sub2", "Adult"))
 
 
-# ordinal logistic regression
-library(MASS)
-mod <- polr(instar ~ proportion*Treatment + proportion*Measurement, 
-            data = col.props.long, Hess = TRUE)
-summary(mod)
 
 
-mod2 <- lm(proportion ~ instar + Treatment:Measurement + instar:Treatment:Measurement, data = col.props.long)
-summary(mod2)
-anova(mod2)
 
+####### multinomial ####### 
+
+# set baseline level
+count.expanded$Treatment <- relevel(count.expanded$Treatment, ref = "Control")
+count.expanded$Measurement <- relevel(count.expanded$Measurement, ref = "Before")
+
+mod5 <- nnet::multinom(formula = instar ~ Treatment + Measurement + Treatment*Measurement,
+                       data = count.expanded)
+summary(mod5)
+Anova(mod5)
+coef(mod5)
+
+#mixed effects multinomial logit model
+library(mclogit)
+mod6 <- mclogit(formula = cbind(count, instar) ~ Treatment + Measurement + Treatment*Measurement, random = ~1|Colony,
+                data = counts.only.long)
+
+mod6 <- mclogit(formula = cbind(count, instar) ~ Treatment, random = ~1|Colony,
+                data = filter(counts.only.long, Measurement == "After"))
+
+summary(mod6)
+aov(mod6)
+
+mod7 <- mclogit(formula = cbind(proportion, instar) ~ Treatment, random = ~1|Colony,
+                data = filter(col.props.long, Measurement == "Before"))
+
+summary(mod7)
 
 col.props.long.after <- col.props.long %>% filter(Measurement == "After")
 mean(col.props.long.after$proportion)
@@ -648,11 +668,125 @@ mod3 <- lm(proportion ~ instar + Measurement,
 summary(mod3)
 anova(mod3)
 
-mod4 <- glm(proportion ~ Treatment, 
-           data = col.props.long.after, family = binomial)
+mod4 <- glmer(instar ~ Treatment + Measurement + Treatment*Measurement + (1|Colony), 
+           data = count.expanded, family = binomial)
 summary(mod4)
 anova(mod4)
 Anova(mod4)
+
+plot(instar ~ Treatment, data = filter(count.expanded, Measurement == "After"))
+
+######## trying chi square #######
+
+counts.only <- col.counts[,c(1:6)]
+
+counts.only.long <- counts.only %>% pivot_longer(!c(Colony, Treatment, Measurement), names_to = "instar", values_to = "count")
+counts.only.long <- counts.only.long %>% 
+  mutate(instar = as.factor(instar))
+levels(counts.only.long$instar) <- c("Adult", "Sub2", "Sub1")
+counts.only.long$instar <- ordered(counts.only.long$instar, levels = c("Sub1", "Sub2", "Adult"))
+
+
+counts.only.long %>% group_by(Colony, instar) %>% summarise(count, Measurement, Treatment)
+
+
+df <- table(count.expanded)
+table.3way <- ftable(count.expanded$Treatment, count.expanded$Measurement, count.expanded$instar)
+mytable <- xtabs(~ Treatment+Measurement+instar, data=count.expanded)
+mytable
+
+
+mantelhaen.test(mytable)
+mantelhaen.test(count.expanded$instar, count.expanded$Treatment, count.expanded$Measurement)
+mantelhaen.test(count.expanded$instar, count.expanded$Treatment, count.expanded$Measurement)
+
+
+mytable2 <- xtabs(~ Treatment+instar, data=filter(count.expanded, Measurement == "After"))
+mod2 <- chisq.test(count.expanded$instar, count.expanded$Measurement)
+mod2 <- fisher.test(mytable2)
+mosaicplot(mytable2)
+
+summary(mod2)
+chisq.posthoc.test::chisq.posthoc.test(mytable2)
+count.ex.after <- filter(count.expanded, Measurement == "After")
+mod3 <- chisq.test(count.ex.after$instar, count.ex.after$Treatment)
+
+mod4 <- mixtools::test.equality.mixed(x = count.ex.after$instar, y = count.ex.after$Colony, w = count.ex.after$Treatment)
+
+mantelhaen.test(mytable)
+
+
+
+# try with brms to add random effect
+library(brms)
+mod.brms <- brm(instar ~ Treatment + Measurement + Treatment*Measurement + (1|Colony), 
+                data=count.expanded, family=cumulative("logit"))
+summary(mod.brms)
+loo(mod.brms)
+
+mod.brms.fixed <- brm(instar ~ Treatment + Measurement + Treatment*Measurement, 
+                data=count.expanded, family=cumulative("logit"))
+summary(mod.brms.fixed)
+loo(mod.brms, mod.brms.fixed)
+
+install.packages("MCMCglmm")
+library(MCMCglmm)
+
+mod.mcmc <- MCMCglmm(instar ~ Treatment + Measurement + Treatment*Measurement, random = ~Colony, 
+                data=count.expanded, family="ordinal")
+######## ordinal ########
+
+# ordinal logistic regression, no random
+
+
+count.expanded <- counts.only.long[rep(seq(nrow(counts.only.long)), counts.only.long$count), 1:4]
+library(MASS)
+mod <- polr(instar ~ Treatment + Measurement + Measurement*Treatment, 
+            data = count.expanded, Hess = TRUE)
+summary(mod)
+Anova(mod)
+
+mod2 <- polr(instar ~ Treatment, 
+             data = filter(count.expanded, Measurement == 'After'), Hess = TRUE)
+summary(mod2)
+Anova(mod2)
+
+
+# try with ordinal package to include random effect - cumulative link mixed model (clmm)
+library(ordinal)
+
+count.expanded$Treatment <- as.factor(count.expanded$Treatment)
+count.expanded$Measurement <- as.factor(count.expanded$Measurement)
+count.expanded$Colony <- as.factor(count.expanded$Colony)
+
+ord.null <- clmm(instar ~ 1 + (1|Colony), data = count.expanded, 
+                 Hess = TRUE)
+ord.mod1 <- clmm(instar ~ Treatment + (1|Colony), data = count.expanded, 
+                 Hess = TRUE)
+ord.mod2 <- clmm(instar ~ Treatment + Measurement + (1|Colony), data = count.expanded, 
+                 Hess = TRUE)
+ord.mod3 <- clmm(instar ~ Treatment*Measurement + (1|Colony), data = count.expanded, 
+                 Hess = TRUE)
+ord.mod3.2 <- clm(instar ~ Treatment*Measurement, data = count.expanded, 
+                 Hess = TRUE)
+RVAideMemoire::Anova.clmm(ord.mod3,type="II")
+summary(ord.mod3)
+anova(ord.mod3, ord.mod3.2)
+summary(ord.mod1)$coefficients
+AIC(ord.mod3,ord.mod3.2)
+
+
+ord.mod2 <- clmm(instar ~ Treatment + (1|Colony), data = filter(count.expanded, Measurement == "After"))
+summary(ord.mod2)
+anova(ord.mod2)
+RVAideMemoire::Anova.clmm(ord.mod2,type="II")
+
+
+
+install.packages("buildmer")
+ord.mod4 <- buildmer::buildclmm(instar ~ Treatment*Measurement + (1|Colony), data = count.expanded)
+summary(ord.mod4)
+anova(ord.mod4)
 
 x.2 <- glm(num.adult ~ Treatment, data =num.after, family = poisson(link = "identity"))
 AIC(x, x.2)
@@ -685,7 +819,12 @@ num.long <- num.after %>%
 num.long <- num.long %>% mutate(instar = recode_factor(instar, num.sub1  = "Sub 1", num.sub2 = "Sub 2", num.adult = "Adult"))
 num.long$instar <- factor(num.long$instar, order = TRUE, levels = c("Sub 1", "Sub 2", "Adult"))
 
-ggplot(data = filter(num.long, instar != "num.all"), aes(x = count, group = instar, fill = instar)) + 
+ggplot(data = filter(num.long, instar != "num.all", Treatment == "Control"), aes(x = count, group = instar, fill = instar)) + 
+  geom_density(alpha = 0.5)+
+  xlab("Count")+
+  theme_cowplot()
+
+ggplot(data = filter(num.long, instar != "num.all", Treatment == "Parasite"), aes(x = count, group = instar, fill = instar)) + 
   geom_density(alpha = 0.5)+
   xlab("Count")+
   theme_cowplot()
