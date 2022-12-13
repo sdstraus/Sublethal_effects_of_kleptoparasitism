@@ -130,7 +130,8 @@ ad.bf.col <- adults.before %>%
 
 ad.af.col <- adults.after %>% 
   group_by(Nest, Treatment) %>% 
-  summarize(after.res = mean(resids))
+  summarize(after.res = mean(resids)) %>% 
+  mutate(instar = "Adult")
 
 adults.col <- full_join(ad.bf.col, ad.af.col)
 adults.col$diff.resids <- adults.col$after.res - adults.col$before.res
@@ -247,7 +248,8 @@ s2.bf.col <- sub2.before %>%
 
 s2.af.col <- sub2.after %>% 
   group_by(Nest, Treatment) %>% 
-  summarize(after.res = mean(resids))
+  summarize(after.res = mean(resids)) %>% 
+  mutate(instar = "Sub2")
 
 sub2.col <- full_join(s2.bf.col, s2.af.col)
 sub2.col$diff.resids <- sub2.col$after.res - sub2.col$before.res
@@ -395,6 +397,13 @@ s1.af.col <- sub1.after %>%
   group_by(Nest, Treatment) %>% 
   summarize(after.res = mean(resids))
 
+write.csv(s1.af.col, "../data/sub1_bcis_after.csv")
+
+all.after.summary <- full_join(ad.af.col, s2.af.col, by = c("Nest", "Treatment"))
+all.after.summary <- full_join(all.after.summary, s1.af.col, by = c("Nest", "Treatment"))
+
+write.csv(all.after.summary, "../data/all.after.summary.csv")
+
 sub1.col <- full_join(s1.bf.col, s1.af.col)
 sub1.col$diff.resids <- sub1.col$after.res - sub1.col$before.res
 
@@ -409,30 +418,36 @@ sub2.col$instar <- "Sub 2"
 sub1.col$instar <- "Sub 1"
 
 all.col <- rbind(adults.col, sub2.col, sub1.col)
-anova(lm(diff.resids ~ instar + Treatment+instar:Treatment, data = all.col)) # p=0.06
+diff.mod <- lm(diff.resids ~ instar + Treatment+instar:Treatment, data = all.col)
+anova(diff.mod)
+
+diff.mod.emm <- emmeans(diff.mod, "instar", data = all.col)
+pairs(diff.mod.emm, adjust = "tukey")
+
 anova(lm(diff.resids ~ instar + Treatment, data = all.col)) # p=0.06
 summary(lm(diff.resids ~ instar + Treatment, data = all.col))
 
 all.col$instar <- factor(all.col$instar, order = TRUE, levels = c("Sub 1", "Sub 2", "Adult"))
+
 
 my_pal <- RColorBrewer::brewer.pal(n=3, name = "Dark2")
 scales::show_col(viridis_pal(option = "C")(4))
 my_pal <- viridis(option = "C", n = 4)
 my_pal <- my_pal[c(4,3,2,1)]
 
-diff.plot <- ggplot(data = all.col, aes(x = instar, y = diff.resids, color = Treatment,                          fill = instar))+
+diff.plot <- ggplot(data = all.col, aes(x = instar, y = diff.resids, fill = Treatment,                          fill = instar))+
   geom_boxplot(alpha = 0.7)+
   # geom_jitter(aes(group = Treatment))+
   geom_hline(yintercept = 0, color = 'red')+
   theme_classic()+
-  scale_color_manual(values = c("black", "darkgrey"))+
-  scale_fill_manual(values = c(paste(my_pal[2:4])))+
+  scale_fill_manual(values = c("black", "darkgrey"))+
+  # scale_fill_manual(values = c(paste(my_pal[2:4])))+
   theme(text = element_text(size=20))+
   ylab(expression(paste(Delta~"BCI")))+
   xlab("Instar")+
-  labs(color = "Treatment", fill = "Instar")
+  labs(fill = "Treatment")
 
-ggsave(diff.plot, filename = "figures/diff_plot.jpeg", dpi = "retina", width = 10, height = 5.5, units = "in")
+ggsave(diff.plot, filename = "../figures/diff_plot.jpeg", dpi = "retina", width = 10, height = 5.5, units = "in")
 
 anova(lm(diff.resids ~ Treatment, data = all.col)) # p=0.06
 
@@ -593,7 +608,7 @@ col.counts <- read.csv("../data/colony_counts.csv")
 
 # remove Col_21 : Note says "Escapees"
 col.counts <- col.counts %>% filter(Colony != "Col_21")
-
+write.csv(col.counts, "../data/colony_counts_CLEANED.csv")
 
 View(col.counts)
 col.counts$num.all <- col.counts$num.adult + col.counts$num.sub2 + col.counts$num.sub1
@@ -602,10 +617,26 @@ num.after <- col.counts[c(which(col.counts$Measurement == "After")),]
 num.after[,7] <- NULL
 
 
-x <- lmer(num.all ~ Treatment + Measurement + Treatment*Measurement + (1|Colony), data = col.counts)
+x <- glmer(num.all ~ Treatment + Measurement + Treatment*Measurement + (1|Colony), 
+           family = poisson(link = "identity"), data = col.counts)
 summary(x)
 anova(x)
 Anova(x)
+
+
+y <- glm(num.all ~ Treatment, data = col.counts, family = poisson(link = "identity"))
+Anova(y, test.statistic = "F")
+
+mortality_plot <- ggplot(data = num.after, aes(x = Treatment, y = num.all, fill = Treatment))+
+  geom_boxplot(alpha = 0.7)+
+  ylab("Total number\n of spider remaining")+
+  theme(text = element_text(size=20))+
+  scale_fill_manual(values = c("black", "darkgrey"))+
+  theme_cowplot()+
+  theme(plot.margin = margin(1,1,1.5,1.2, "cm"))
+
+plot_5.2 <- ggarrange(diff.plot, mortality_plot, nrow = 2, labels = "auto", common.legend = TRUE, legend = "right")
+ggsave(plot_5.2, filename = "../figures/Plot_5.2.jpeg", dpi = "retina", width = 5, height = 7, units = 'in')
 
 # create proportion columns
 col.counts <- col.counts %>% 
