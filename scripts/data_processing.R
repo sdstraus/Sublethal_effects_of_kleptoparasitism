@@ -400,5 +400,7 @@ sub2.col$instar <- "Sub 2"
 sub1.col$instar <- "Sub 1"
 
 all.col <- rbind(adults.col, sub2.col, sub1.col)
-write.csv(all.col, "data/BCI_cleaned_all.csv", row.names = FALSE)
+write.csv(all.col, "data/BCI_differences.csv", row.names = FALSE)
 
+df_new <- rbind(adults, sub2, sub1.final)
+write.csv(df_new, "data/BCI_final.csv", row.names = FALSE)
