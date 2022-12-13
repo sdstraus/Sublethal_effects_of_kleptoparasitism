@@ -4,91 +4,140 @@ For each file, we include a general description of the type of data, and a data 
 
 *BCI_differences.csv* contains the cleaned dataset of delta BCI used for downstream analyses.
 
-|             |                                                                        |
-|-------------|------------------------------------------------------------------------|
++-------------+------------------------------------------------------------------------+
 | Nest        | number of experimental colony                                          |
++-------------+------------------------------------------------------------------------+
 | Treatment   | Assignment to either experimental or control treatment                 |
++-------------+------------------------------------------------------------------------+
 | before.res  | BCI index before experimental period                                   |
++-------------+------------------------------------------------------------------------+
 | after.res   | BCI index after experimental period                                    |
++-------------+------------------------------------------------------------------------+
 | instar      | Whether individual belonged to adult, subadult 2, or subadult 1 instar |
++-------------+------------------------------------------------------------------------+
 | diff.resids | difference between before.res and after.res                            |
++-------------+------------------------------------------------------------------------+
 
 *BCI_final.csv* contains the cleaned dataset of BCIs for all measurements, treatments, and instars, and it is used for downstream analyses.
 
-|              |                                                                                     |
-|--------------|-------------------------------------------------------------------------------------|
++--------------+-------------------------------------------------------------------------------------+
 | Date         | Date of observation                                                                 |
++--------------+-------------------------------------------------------------------------------------+
 | Nest         | number of experimental colony                                                       |
++--------------+-------------------------------------------------------------------------------------+
 | Ind.         | measured up to 15 individuals per colony, this column indicates which number (1-15) |
++--------------+-------------------------------------------------------------------------------------+
 | weight.grams | spider body weight in grams                                                         |
++--------------+-------------------------------------------------------------------------------------+
 | CT.W         | width of the cephalothorax in millimeters                                           |
++--------------+-------------------------------------------------------------------------------------+
 | PT.L         | combined length of the patella and tibia segments of front leg                      |
++--------------+-------------------------------------------------------------------------------------+
 | instar       | Whether individual belonged to adult, subadult 2, or subadult 1 instar              |
++--------------+-------------------------------------------------------------------------------------+
 | Measurement  | Whether this measurement occurred before or after the experimental period           |
++--------------+-------------------------------------------------------------------------------------+
 | Treatment    | Assignment to either experimental or control treatment                              |
++--------------+-------------------------------------------------------------------------------------+
 | notes        | notes or comments on row                                                            |
++--------------+-------------------------------------------------------------------------------------+
 | weight.mg    | weight in milligrams                                                                |
++--------------+-------------------------------------------------------------------------------------+
 | resids       | Body condition index (BCI)                                                          |
++--------------+-------------------------------------------------------------------------------------+
 
 *colony_counts_CLEANED.csv* contained the cleaned colony counts for each colony, measurement, treatment, and instar. Col_21 was removed because some spiders escaped their enclosure.
 
-|             |                                                                           |
-|-------------|---------------------------------------------------------------------------|
++-------------+---------------------------------------------------------------------------+
 | Colony      | number of experimental colony                                             |
++-------------+---------------------------------------------------------------------------+
 | num.adult   | number of adults in colony                                                |
++-------------+---------------------------------------------------------------------------+
 | num.sub2    | number of subadult 2s in colony                                           |
++-------------+---------------------------------------------------------------------------+
 | num.sub1    | number of subadult 1s in colony                                           |
++-------------+---------------------------------------------------------------------------+
 | Treatment   | Assignment to either experimental or control treatment                    |
++-------------+---------------------------------------------------------------------------+
 | Measurement | Whether this measurement occurred before or after the experimental period |
++-------------+---------------------------------------------------------------------------+
 
 *colony_counts_RAW.csv* contains the raw, uncleaned counts for each colony, measurement, treatment, and instar.
 
-|             |                                                                           |
-|-------------|---------------------------------------------------------------------------|
++-------------+---------------------------------------------------------------------------+
 | Colony      | number of experimental colony                                             |
++-------------+---------------------------------------------------------------------------+
 | num.adult   | number of adults in colony                                                |
++-------------+---------------------------------------------------------------------------+
 | num.sub2    | number of subadult 2s in colony                                           |
++-------------+---------------------------------------------------------------------------+
 | num.sub1    | number of subadult 1s in colony                                           |
++-------------+---------------------------------------------------------------------------+
 | Treatment   | Assignment to either experimental or control treatment                    |
++-------------+---------------------------------------------------------------------------+
 | Measurement | Whether this measurement occurred before or after the experimental period |
++-------------+---------------------------------------------------------------------------+
 
 *eximius_body_measurements.csv* contains the body condition measurements from each colony, instar, measurement, and treatment.
 
-|              |                                                                                     |
-|--------------|-------------------------------------------------------------------------------------|
++--------------+-------------------------------------------------------------------------------------+
 | Date         | Date of observation                                                                 |
++--------------+-------------------------------------------------------------------------------------+
 | Nest         | number of experimental colony                                                       |
++--------------+-------------------------------------------------------------------------------------+
 | Ind\#        | measured up to 15 individuals per colony, this column indicates which number (1-15) |
++--------------+-------------------------------------------------------------------------------------+
 | weight.grams | spider body weight in grams                                                         |
++--------------+-------------------------------------------------------------------------------------+
 | CT-W         | width of the cephalothorax in millimeters                                           |
++--------------+-------------------------------------------------------------------------------------+
 | PT-L         | combined length of the patella and tibia segments of front leg                      |
++--------------+-------------------------------------------------------------------------------------+
 | instar       | Whether individual belonged to adult, subadult 2, or subadult 1 instar              |
++--------------+-------------------------------------------------------------------------------------+
 | Measurement  | Whether this measurement occurred before or after the experimental period           |
++--------------+-------------------------------------------------------------------------------------+
 | Treatment    | Assignment to either experimental or control treatment                              |
++--------------+-------------------------------------------------------------------------------------+
 | notes        | notes or comments on row                                                            |
++--------------+-------------------------------------------------------------------------------------+
 
 *sub1_weights.csv* contains pooled weights for subadult 1 spiders.
 
-|             |                                                                           |
-|-------------|---------------------------------------------------------------------------|
-| Nest        | number of experimental colony                                             |
-| num.sub1    | number of subadult 1s pooled for weight measurement                       |
-| Weight      | spider body weight in grams                                               |
-| Measurement | Whether this measurement occurred before or after the experimental period |
-| Treatment   | Assignment to either experimental or control treatment                    |
++---------------+---------------------------------------------------------------------------+
+| Nest          | number of experimental colony                                             |
++---------------+---------------------------------------------------------------------------+
+| num.sub1      | number of subadult 1s pooled for weight measurement                       |
++---------------+---------------------------------------------------------------------------+
+| Weight        | spider body weight in grams                                               |
++---------------+---------------------------------------------------------------------------+
+| Measurement   | Whether this measurement occurred before or after the experimental period |
++---------------+---------------------------------------------------------------------------+
+| Treatment     | Assignment to either experimental or control treatment                    |
++---------------+---------------------------------------------------------------------------+
 
 *Sub1wts.csv* combines the weights from the sub1_weights.csv dataset with the body condition data for subadult 1 instar.
 
-|              |                                                                                     |
-|--------------|-------------------------------------------------------------------------------------|
++--------------+-------------------------------------------------------------------------------------+
 | Date         | Date of observation                                                                 |
++--------------+-------------------------------------------------------------------------------------+
 | Nest         | number of experimental colony                                                       |
++--------------+-------------------------------------------------------------------------------------+
 | Ind.         | measured up to 15 individuals per colony, this column indicates which number (1-15) |
++--------------+-------------------------------------------------------------------------------------+
 | weight.grams | spider body weight in grams                                                         |
++--------------+-------------------------------------------------------------------------------------+
 | CT.W         | width of the cephalothorax in millimeters                                           |
++--------------+-------------------------------------------------------------------------------------+
 | PT.L         | combined length of the patella and tibia segments of front leg                      |
++--------------+-------------------------------------------------------------------------------------+
 | instar       | Whether individual belonged to adult, subadult 2, or subadult 1 instar              |
++--------------+-------------------------------------------------------------------------------------+
 | Measurement  | Whether this measurement occurred before or after the experimental period           |
++--------------+-------------------------------------------------------------------------------------+
 | Treatment    | Assignment to either experimental or control treatment                              |
++--------------+-------------------------------------------------------------------------------------+
 | notes        | notes or comments on row                                                            |
++--------------+-------------------------------------------------------------------------------------+
 | weight.mg    | weight in milligrams                                                                |
++--------------+-------------------------------------------------------------------------------------+
