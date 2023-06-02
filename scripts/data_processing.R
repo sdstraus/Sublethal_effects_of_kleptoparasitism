@@ -50,7 +50,23 @@ adult.resid.plot <- ggplot(data=adults, aes(x=CT.W, y = weight.mg))+
         axis.title = element_text(size = 16),
         axis.line = element_line(size = 1.0))
 
+## Using SMI from Reviewer 2
 
+y <- lm(log(weight.mg) ~ log(CT.W), data = adults)
+bOLS <- coef(y)[2]
+r <- cor(adults$CT.W, adults$weight.mg, method = "pearson")
+pop_cw <- mean(adults$CT.W)
+
+adults$SMI <- rep(0, times = length(adults$Date))
+for(i in 1:length(adults$SMI)){
+  adults$SMI[i] <- get_smi(pop_cw, adults$CT.W[i], adults$weight.mg[i], bOLS, r)
+}
+
+# test
+row <- sample(1:length(adults$Date), 1)
+# ind_wt*((pop_cw/ind_cw)^(bOLS/r))
+adults$weight.mg[row] * ((pop_cw/adults$CT.W[row])^(bOLS/r))
+adults$SMI[row]
 
 #### Effect Sizes ####
 
@@ -58,79 +74,83 @@ adult.resid.plot <- ggplot(data=adults, aes(x=CT.W, y = weight.mg))+
 adults.before <- adults %>% 
   filter(Measurement == "before")
 
-y1 <- lmer(resids ~ Treatment + (1|Nest), data = adults.before)
-Anova(y1, test.statistic = "F")
-
-adult.p1 <- ggplot(data = adults.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-cohen.d(adults.before$resids, adults.before$Treatment)
-
 # adults, after comparing treatments
 adults.after <- adults %>% 
   filter(Measurement == "after")
-
-y2 <- lmer(resids ~ Treatment + (1|Nest), data = adults.after)
-Anova(y2, test.statistic = "F")
-
-cohen.d(adults.after$resids, adults.after$Treatment)
-
-adult.p2 <- ggplot(data = adults.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-# adults, control, comparing before and after
-adults.control <- adults %>% 
-  filter(Treatment == "Control")
-
-cohen.d(adults.control$resids, adults.control$Measurement)
-
-y3 <- lmer(resids ~ Measurement + (1|Nest), data = adults.control)
-Anova(y3, test.statistic = "F")
-
-adult.p3 <- ggplot(data = adults.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-# parasites, control, comparing before and after
-adults.parasite <- adults %>% 
-  filter(Treatment == "Parasite")
-
-y4 <- lmer(resids ~ Measurement + (1|Nest), data = adults.parasite)
-Anova(y4, test.statistic = "F")
-
-cohen.d(adults.parasite$resids, adults.parasite$Measurement)
-
-adult.p4 <- ggplot(data = adults.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
 
 # differences in residuals (before & after) between treatments
 
 ad.bf.col <- adults.before %>% 
   group_by(Nest, Treatment) %>% 
-  summarize(before.res = mean(resids))
+  summarize(before.smi = mean(SMI))
 
 ad.af.col <- adults.after %>% 
   group_by(Nest, Treatment) %>% 
-  summarize(after.res = mean(resids)) %>% 
+  summarize(after.smi = mean(SMI)) %>% 
   mutate(instar = "Adult")
 
 adults.col <- full_join(ad.bf.col, ad.af.col)
-adults.col$diff.resids <- adults.col$after.res - adults.col$before.res
+adults.col$diff.smi <- adults.col$after.smi - adults.col$before.smi
+# 
+# ggplot(data = adults.col, aes(x = Treatment, y = diff.resids))+
+#   geom_boxplot()
+# 
+# anova(lm(diff.resids ~ Treatment, data = adults.col))
+# 
+# cohen.d(adults.col$diff.resids ~ adults.col$Treatment)
 
-ggplot(data = adults.col, aes(x = Treatment, y = diff.resids))+
-  geom_boxplot()
 
-anova(lm(diff.resids ~ Treatment, data = adults.col))
+# 
+# y1 <- lmer(resids ~ Treatment + (1|Nest), data = adults.before)
+# Anova(y1, test.statistic = "F")
+# 
+# adult.p1 <- ggplot(data = adults.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# cohen.d(adults.before$resids, adults.before$Treatment)
+# 
+# 
+# 
+# y2 <- lmer(resids ~ Treatment + (1|Nest), data = adults.after)
+# Anova(y2, test.statistic = "F")
+# 
+# cohen.d(adults.after$resids, adults.after$Treatment)
+# 
+# adult.p2 <- ggplot(data = adults.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# # adults, control, comparing before and after
+# adults.control <- adults %>% 
+#   filter(Treatment == "Control")
+# 
+# cohen.d(adults.control$resids, adults.control$Measurement)
+# 
+# y3 <- lmer(resids ~ Measurement + (1|Nest), data = adults.control)
+# Anova(y3, test.statistic = "F")
+# 
+# adult.p3 <- ggplot(data = adults.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# # parasites, control, comparing before and after
+# adults.parasite <- adults %>% 
+#   filter(Treatment == "Parasite")
+# 
+# y4 <- lmer(resids ~ Measurement + (1|Nest), data = adults.parasite)
+# Anova(y4, test.statistic = "F")
+# 
+# cohen.d(adults.parasite$resids, adults.parasite$Measurement)
+# 
+# adult.p4 <- ggplot(data = adults.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
 
-cohen.d(adults.col$diff.resids ~ adults.col$Treatment)
 
 
 # SUBADULT 2 -------------------
@@ -165,58 +185,32 @@ sub2.resid.plot <- ggplot(data=sub2, aes(x=CT.W, y = weight.mg))+
         axis.line = element_line(size = 1.0))
 
 
+## Using SMI from Reviewer 2
+
+y <- lm(log(weight.mg) ~ log(CT.W), data = sub2)
+bOLS <- coef(y)[2]
+r <- cor(sub2$CT.W, sub2$weight.mg, method = "pearson")
+pop_cw <- mean(sub2$CT.W)
+
+sub2$SMI <- rep(0, times = length(sub2$Date))
+for(i in 1:length(sub2$SMI)){
+  sub2$SMI[i] <- get_smi(pop_cw, sub2$CT.W[i], sub2$weight.mg[i], bOLS, r)
+}
+
+
 #### Effect Sizes ####
 # sub2, before comparing treatments
 sub2.before <- sub2 %>% 
   filter(Measurement == "before")
 
-y1 <- lmer(resids ~ Treatment + (1|Nest), data = sub2.before)
-Anova(y1, test.statistic = "F")
-
-sub2.p0 <- ggplot(data = sub2.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-cohen.d(sub2.before$resids, sub2.before$Treatment)
-
 # sub2, after comparing treatments
 sub2.after <- sub2 %>% 
   filter(Measurement == "after")
 
-cohen.d(sub2.after$resids, sub2.after$Treatment)
+y1 <- lmer(resids ~ Treatment + (1|Nest), data = sub2.before)
+Anova(y1, test.statistic = "F")
 
-y2 <- lmer(resids ~ Treatment + (1|Nest), data = sub2.after)
-Anova(y2, test.statistic = "F")
-
-sub2.p1 <- ggplot(data = sub2.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-# sub2, control, comparing before and after
-sub2.control <- sub2 %>% 
-  filter(Treatment == "Control")
-
-cohen.d(sub2.control$resids, sub2.control$Measurement)
-
-y3 <- lmer(resids ~ Measurement + (1|Nest), data = sub2.control)
-Anova(y3, test.statistic = "F")
-
-sub2.p2 <- ggplot(data = sub2.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-# parasites, sub2, comparing before and after
-sub2.parasite <- sub2 %>% 
-  filter(Treatment == "Parasite")
-cohen.d(sub2.parasite$resids, sub2.parasite$Measurement)
-
-y4 <- lmer(resids ~ Measurement + (1|Nest), data = sub2.parasite)
-Anova(y4, test.statistic = "F")
-
-sub2.p3 <- ggplot(data = sub2.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
+sub2.p0 <- ggplot(data = sub2.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
   geom_density(alpha = 0.5)+
   xlab("Body Condition Index")+
   theme_cowplot()
@@ -227,21 +221,62 @@ sub2.p3 <- ggplot(data = sub2.parasite, aes(x = resids, group = Measurement, fil
 
 s2.bf.col <- sub2.before %>% 
   group_by(Nest, Treatment) %>% 
-  summarize(before.res = mean(resids))
+  summarize(before.smi = mean(SMI))
 
 s2.af.col <- sub2.after %>% 
   group_by(Nest, Treatment) %>% 
-  summarize(after.res = mean(resids)) %>% 
+  summarize(after.smi = mean(SMI)) %>% 
   mutate(instar = "Sub2")
 
 sub2.col <- full_join(s2.bf.col, s2.af.col)
-sub2.col$diff.resids <- sub2.col$after.res - sub2.col$before.res
+sub2.col$diff.smi <- sub2.col$after.smi - sub2.col$before.smi
 
 ggplot(data = sub2.col, aes(x = Treatment, y = diff.resids))+
   geom_boxplot()
 
 anova(lm(diff.resids ~ Treatment, data = sub2.col)) # p=0.051
 cohen.d(sub2.col$diff.resids, sub2.col$Treatment, na.rm = TRUE) #medium
+# 
+# cohen.d(sub2.before$resids, sub2.before$Treatment)
+# cohen.d(sub2.after$resids, sub2.after$Treatment)
+# 
+# y2 <- lmer(resids ~ Treatment + (1|Nest), data = sub2.after)
+# Anova(y2, test.statistic = "F")
+# 
+# sub2.p1 <- ggplot(data = sub2.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# # sub2, control, comparing before and after
+# sub2.control <- sub2 %>% 
+#   filter(Treatment == "Control")
+# 
+# cohen.d(sub2.control$resids, sub2.control$Measurement)
+# 
+# y3 <- lmer(resids ~ Measurement + (1|Nest), data = sub2.control)
+# Anova(y3, test.statistic = "F")
+# 
+# sub2.p2 <- ggplot(data = sub2.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# # parasites, sub2, comparing before and after
+# sub2.parasite <- sub2 %>% 
+#   filter(Treatment == "Parasite")
+# cohen.d(sub2.parasite$resids, sub2.parasite$Measurement)
+# 
+# y4 <- lmer(resids ~ Measurement + (1|Nest), data = sub2.parasite)
+# Anova(y4, test.statistic = "F")
+# 
+# sub2.p3 <- ggplot(data = sub2.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+
+
 
 # SUBADULT 1 -------------------------------
 
@@ -314,81 +349,96 @@ ggsave(resid.plots, filename = "figures/resid.plots.jpeg", dpi = "retina",
        width = 12, height = 4, units = "in")
 
 
+## Using SMI from Reviewer 2
+
+y <- lm(log(weight.mg) ~ log(CT.W), data = sub1.final)
+bOLS <- coef(y)[2]
+r <- cor(sub1.final$CT.W, sub1.final$weight.mg, method = "pearson")
+pop_cw <- mean(sub1.final$CT.W)
+
+sub1.final$SMI <- rep(0, times = length(sub1.final$Date))
+for(i in 1:length(sub1.final$SMI)){
+  sub1.final$SMI[i] <- get_smi(pop_cw, sub1.final$CT.W[i], sub1.final$weight.mg[i], bOLS, r)
+}
+
 #### Effect Sizes ####
 # sub1, before comparing treatments
 sub1.before <- sub1.final %>% 
   filter(Measurement == "before")
 
-y1 <- lmer(resids ~ Treatment + (1|Nest), data = sub1.before)
-Anova(y1, test.statistic = "F")
-
-sub1.p1 <- ggplot(data = sub1.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-cohen.d(sub1.before$resids, sub1.before$Treatment)
 
 # sub1, after comparing treatments
 sub1.after <- sub1.final %>% 
   filter(Measurement == "after")
-
-cohen.d(sub1.after$resids, sub1.after$Treatment)
-
-y2 <- lmer(resids ~ Treatment + (1|Nest), data = sub1.after)
-Anova(y2, test.statistic = "F")
-
-sub1.p2 <- ggplot(data = sub1.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-# sub1, control, comparing before and after
-sub1.control <- sub1.final %>% 
-  filter(Treatment == "Control")
-cohen.d(sub1.control$resids, sub1.control$Measurement)
-
-y3 <- lmer(resids ~ Measurement + (1|Nest), data = sub1.control)
-Anova(y3, test.statistic = "F")
-
-sub1.p3 <- ggplot(data = sub1.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-# parasites, sub2, comparing before and after
-sub1.parasite <- sub1.final %>% 
-  filter(Treatment == "Parasite")
-effsize::cohen.d(sub1.parasite$resids, sub1.parasite$Measurement)
-
-y4 <- lmer(resids ~ Measurement + (1|Nest), data = sub1.parasite)
-Anova(y4, test.statistic = "F")
-
-sub1.p4 <- ggplot(data = sub1.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
 
 
 # differences in residuals (before & after) between treatments
 
 s1.bf.col <- sub1.before %>% 
   group_by(Nest, Treatment) %>% 
-  summarize(before.res = mean(resids))
+  summarize(before.smi = mean(SMI))
 
 s1.af.col <- sub1.after %>% 
   group_by(Nest, Treatment) %>% 
-  summarize(after.res = mean(resids))
+  summarize(after.smi = mean(SMI))
 
 sub1.col <- full_join(s1.bf.col, s1.af.col)
-sub1.col$diff.resids <- sub1.col$after.res - sub1.col$before.res
+sub1.col$diff.smi <- sub1.col$after.smi - sub1.col$before.smi
+# 
+# ggplot(data = sub1.col, aes(x = Treatment, y = diff.resids))+
+#   geom_boxplot()
+# 
+# anova(lm(diff.resids ~ Treatment, data = sub1.col))
+# cohen.d(sub1.col$diff.resids, sub1.col$Treatment)
 
-ggplot(data = sub1.col, aes(x = Treatment, y = diff.resids))+
-  geom_boxplot()
 
-anova(lm(diff.resids ~ Treatment, data = sub1.col))
-cohen.d(sub1.col$diff.resids, sub1.col$Treatment)
+# y1 <- lmer(resids ~ Treatment + (1|Nest), data = sub1.before)
+# Anova(y1, test.statistic = "F")
+# 
+# sub1.p1 <- ggplot(data = sub1.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# cohen.d(sub1.before$resids, sub1.before$Treatment)
+# 
+# cohen.d(sub1.after$resids, sub1.after$Treatment)
+# 
+# y2 <- lmer(resids ~ Treatment + (1|Nest), data = sub1.after)
+# Anova(y2, test.statistic = "F")
+# 
+# sub1.p2 <- ggplot(data = sub1.after, aes(x = resids, group = Treatment, fill = Treatment)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# # sub1, control, comparing before and after
+# sub1.control <- sub1.final %>% 
+#   filter(Treatment == "Control")
+# cohen.d(sub1.control$resids, sub1.control$Measurement)
+# 
+# y3 <- lmer(resids ~ Measurement + (1|Nest), data = sub1.control)
+# Anova(y3, test.statistic = "F")
+# 
+# sub1.p3 <- ggplot(data = sub1.control, aes(x = resids, group = Measurement, fill = Measurement)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# # parasites, sub2, comparing before and after
+# sub1.parasite <- sub1.final %>% 
+#   filter(Treatment == "Parasite")
+# effsize::cohen.d(sub1.parasite$resids, sub1.parasite$Measurement)
+# 
+# y4 <- lmer(resids ~ Measurement + (1|Nest), data = sub1.parasite)
+# Anova(y4, test.statistic = "F")
+# 
+# sub1.p4 <- ggplot(data = sub1.parasite, aes(x = resids, group = Measurement, fill = Measurement)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# 
 
 # POOLED -----------------------
 

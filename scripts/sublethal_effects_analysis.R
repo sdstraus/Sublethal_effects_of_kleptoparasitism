@@ -16,13 +16,14 @@ all.col$instar <- factor(all.col$instar, order = TRUE, levels = c("Sub 1", "Sub 
 
 # BCI Difference -------------
 
-diff.mod <- lm(diff.resids ~ instar + Treatment+instar:Treatment, data = all.col)
+diff.mod <- lm(diff.smi ~ instar + Treatment+instar:Treatment, data = all.col)
 anova(diff.mod)
 
+diff.mod.emm <- emmeans(diff.mod, "instar")
 pairs(diff.mod.emm, adjust = "tukey")
 
 
-diff.plot <- ggplot(data = all.col, aes(x = instar, y = diff.resids, fill = Treatment, fill = instar))+
+diff.plot <- ggplot(data = all.col, aes(x = instar, y = diff.smi, fill = Treatment, fill = instar))+
   geom_boxplot(alpha = 0.7)+
   # geom_jitter(aes(group = Treatment))+
   geom_hline(yintercept = 0, color = 'red')+
@@ -62,7 +63,7 @@ ggplot(data=df_new, aes(x=CT.W, y = weight.mg))+
 df_new$instar <- factor(df_new$instar, order = TRUE, levels = c("Sub 1", "Sub 2", "Adult"))
 
 # mega model
-full.mod <- lmer(resids ~ Treatment + Measurement + Treatment:Measurement + (1|instar) + (1|Nest), data = df_new)
+full.mod <- lmer(SMI ~ Treatment + Measurement + Treatment:Measurement + (1|instar) + (1|Nest), data = df_new)
 Anova(full.mod, test.statistic = "F")
 summary(full.mod)
 
