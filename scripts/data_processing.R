@@ -49,24 +49,24 @@ adult.resid.plot <- ggplot(data=adults, aes(x=CT.W, y = weight.mg))+
   theme(axis.text = element_text(size = 16, color = "black"),
         axis.title = element_text(size = 16),
         axis.line = element_line(size = 1.0))
-
-## Using SMI from Reviewer 2
-
-y <- lm(log(weight.mg) ~ log(CT.W), data = adults)
-bOLS <- coef(y)[2]
-r <- cor(adults$CT.W, adults$weight.mg, method = "pearson")
-pop_cw <- mean(adults$CT.W)
-
-adults$SMI <- rep(0, times = length(adults$Date))
-for(i in 1:length(adults$SMI)){
-  adults$SMI[i] <- get_smi(pop_cw, adults$CT.W[i], adults$weight.mg[i], bOLS, r)
-}
-
-# test
-row <- sample(1:length(adults$Date), 1)
-# ind_wt*((pop_cw/ind_cw)^(bOLS/r))
-adults$weight.mg[row] * ((pop_cw/adults$CT.W[row])^(bOLS/r))
-adults$SMI[row]
+# 
+# ## Using SMI from Reviewer 2
+# 
+# y <- lm(log10(weight.mg) ~ log10(CT.W), data = adults)
+# bOLS_ad <- coef(y)[2]
+# r_ad <- cor(log10(adults$CT.W), log10(adults$weight.mg), method = "pearson")
+# pop_cw_ad <- mean(adults$CT.W)
+# 
+# adults$SMI <- rep(0, times = length(adults$Date))
+# for(i in 1:length(adults$SMI)){
+#   adults$SMI[i] <- get_smi(pop_cw_ad, adults$CT.W[i], adults$weight.mg[i], bOLS_ad, r_ad)
+# }
+# 
+# # test
+# row <- sample(1:length(adults$Date), 1)
+# # ind_wt*((pop_cw/ind_cw)^(bOLS/r))
+# adults$weight.mg[row] * ((pop_cw/adults$CT.W[row])^(bOLS_ad/r_ad))
+# adults$SMI[row]
 
 #### Effect Sizes ####
 
@@ -95,9 +95,9 @@ adults.col$diff.smi <- adults.col$after.smi - adults.col$before.smi
 # ggplot(data = adults.col, aes(x = Treatment, y = diff.resids))+
 #   geom_boxplot()
 # 
-# anova(lm(diff.resids ~ Treatment, data = adults.col))
+anova(lm(diff.smi ~ Treatment, data = adults.col))
 # 
-# cohen.d(adults.col$diff.resids ~ adults.col$Treatment)
+cohen.d(adults.col$diff.smi ~ adults.col$Treatment)
 
 
 # 
@@ -184,58 +184,58 @@ sub2.resid.plot <- ggplot(data=sub2, aes(x=CT.W, y = weight.mg))+
         axis.title = element_text(size = 16),
         axis.line = element_line(size = 1.0))
 
-
-## Using SMI from Reviewer 2
-
-y <- lm(log(weight.mg) ~ log(CT.W), data = sub2)
-bOLS <- coef(y)[2]
-r <- cor(sub2$CT.W, sub2$weight.mg, method = "pearson")
-pop_cw <- mean(sub2$CT.W)
-
-sub2$SMI <- rep(0, times = length(sub2$Date))
-for(i in 1:length(sub2$SMI)){
-  sub2$SMI[i] <- get_smi(pop_cw, sub2$CT.W[i], sub2$weight.mg[i], bOLS, r)
-}
-
-
-#### Effect Sizes ####
-# sub2, before comparing treatments
-sub2.before <- sub2 %>% 
-  filter(Measurement == "before")
-
-# sub2, after comparing treatments
-sub2.after <- sub2 %>% 
-  filter(Measurement == "after")
-
-y1 <- lmer(resids ~ Treatment + (1|Nest), data = sub2.before)
-Anova(y1, test.statistic = "F")
-
-sub2.p0 <- ggplot(data = sub2.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
-  geom_density(alpha = 0.5)+
-  xlab("Body Condition Index")+
-  theme_cowplot()
-
-
-
-# differences in residuals (before & after) between treatments
-
-s2.bf.col <- sub2.before %>% 
-  group_by(Nest, Treatment) %>% 
-  summarize(before.smi = mean(SMI))
-
-s2.af.col <- sub2.after %>% 
-  group_by(Nest, Treatment) %>% 
-  summarize(after.smi = mean(SMI)) %>% 
-  mutate(instar = "Sub2")
-
-sub2.col <- full_join(s2.bf.col, s2.af.col)
-sub2.col$diff.smi <- sub2.col$after.smi - sub2.col$before.smi
-
-ggplot(data = sub2.col, aes(x = Treatment, y = diff.resids))+
-  geom_boxplot()
-
-anova(lm(diff.resids ~ Treatment, data = sub2.col)) # p=0.051
-cohen.d(sub2.col$diff.resids, sub2.col$Treatment, na.rm = TRUE) #medium
+# 
+# ## Using SMI from Reviewer 2
+# 
+# y <- lm(log10(weight.mg) ~ log10(CT.W), data = sub2)
+# bOLS_s2 <- coef(y)[2]
+# r_s2 <- cor(log10(sub2$CT.W), log10(sub2$weight.mg), method = "pearson")
+# pop_cw_s2 <- mean(sub2$CT.W)
+# 
+# sub2$SMI <- rep(0, times = length(sub2$Date))
+# for(i in 1:length(sub2$SMI)){
+#   sub2$SMI[i] <- get_smi(pop_cw_s2, sub2$CT.W[i], sub2$weight.mg[i], bOLS_s2, r_s2)
+# }
+# 
+# 
+# #### Effect Sizes ####
+# # sub2, before comparing treatments
+# sub2.before <- sub2 %>% 
+#   filter(Measurement == "before")
+# 
+# # sub2, after comparing treatments
+# sub2.after <- sub2 %>% 
+#   filter(Measurement == "after")
+# 
+# y1 <- lmer(resids ~ Treatment + (1|Nest), data = sub2.before)
+# Anova(y1, test.statistic = "F")
+# 
+# sub2.p0 <- ggplot(data = sub2.before, aes(x = resids, group = Treatment, fill = Treatment)) + 
+#   geom_density(alpha = 0.5)+
+#   xlab("Body Condition Index")+
+#   theme_cowplot()
+# 
+# 
+# 
+# # differences in residuals (before & after) between treatments
+# 
+# s2.bf.col <- sub2.before %>% 
+#   group_by(Nest, Treatment) %>% 
+#   summarize(before.smi = mean(SMI))
+# 
+# s2.af.col <- sub2.after %>% 
+#   group_by(Nest, Treatment) %>% 
+#   summarize(after.smi = mean(SMI)) %>% 
+#   mutate(instar = "Sub2")
+# 
+# sub2.col <- full_join(s2.bf.col, s2.af.col)
+# sub2.col$diff.smi <- sub2.col$after.smi - sub2.col$before.smi
+# 
+# ggplot(data = sub2.col, aes(x = Treatment, y = diff.resids))+
+#   geom_boxplot()
+# 
+# anova(lm(diff.smi ~ Treatment, data = sub2.col)) # p=0.051
+# cohen.d(sub2.col$diff.smi, sub2.col$Treatment, na.rm = TRUE) #medium
 # 
 # cohen.d(sub2.before$resids, sub2.before$Treatment)
 # cohen.d(sub2.after$resids, sub2.after$Treatment)
@@ -281,38 +281,38 @@ cohen.d(sub2.col$diff.resids, sub2.col$Treatment, na.rm = TRUE) #medium
 # SUBADULT 1 -------------------------------
 
 ###### Body Condition #########
+# 
+# sub1wts <- read.csv("data/sub1_weights.csv")
+# sub1wts$avg.wt <- (sub1wts$Weight / sub1wts$num.sub1)
+# sub1wts.before <- sub1wts[c(which(sub1wts$Measurement == "before")),]
+# sub1wts.after <- sub1wts[c(which(sub1wts$Measurement == "after")),]
+# 
+# sub1 <- df_all[-c(which(df_all$instar != "Sub 1")),]
+# sub1.before <- sub1[c(which(sub1$Measurement == "before")),]
+# sub1.after <- sub1[c(which(sub1$Measurement == "after")),]
+# 
+# #### sub average weight for each individual
+# ## before
+# for(i in 1:length(sub1.before$Nest)){
+#   for(j in 1:length(sub1wts.before$Nest)){
+#     if(sub1.before$Nest[i] == sub1wts.before$Nest[j]){
+#       sub1.before$weight.grams[i] <- sub1wts.before$avg.wt[j]
+#     }}}
+# 
+# ## after
+# for(i in 1:length(sub1.after$Nest)){
+#   for(j in 1:length(sub1wts.after$Nest)){
+#     if(sub1.after$Nest[i] == sub1wts.after$Nest[j]){
+#       sub1.after$weight.grams[i] <- sub1wts.after$avg.wt[j]
+#     }}}
+# 
+# #sub1.before <- sub1.before[,-10]
+# sub1.final <- rbind(sub1.after, sub1.before)
+# sub1.final$weight.mg <- sub1.final$weight.grams * 1000
+# write.csv(sub1.final, "data/Sub1wts.csv", row.names = FALSE)
 
-sub1wts <- read.csv("data/sub1_weights.csv")
-sub1wts$avg.wt <- (sub1wts$Weight / sub1wts$num.sub1)
-sub1wts.before <- sub1wts[c(which(sub1wts$Measurement == "before")),]
-sub1wts.after <- sub1wts[c(which(sub1wts$Measurement == "after")),]
 
-sub1 <- df_all[-c(which(df_all$instar != "Sub 1")),]
-sub1.before <- sub1[c(which(sub1$Measurement == "before")),]
-sub1.after <- sub1[c(which(sub1$Measurement == "after")),]
-
-#### sub average weight for each individual
-## before
-for(i in 1:length(sub1.before$Nest)){
-  for(j in 1:length(sub1wts.before$Nest)){
-    if(sub1.before$Nest[i] == sub1wts.before$Nest[j]){
-      sub1.before$weight.grams[i] <- sub1wts.before$avg.wt[j]
-    }}}
-
-## after
-for(i in 1:length(sub1.after$Nest)){
-  for(j in 1:length(sub1wts.after$Nest)){
-    if(sub1.after$Nest[i] == sub1wts.after$Nest[j]){
-      sub1.after$weight.grams[i] <- sub1wts.after$avg.wt[j]
-    }}}
-
-#sub1.before <- sub1.before[,-10]
-sub1.final <- rbind(sub1.after, sub1.before)
-sub1.final$weight.mg <- sub1.final$weight.grams * 1000
-write.csv(sub1.final, "data/Sub1wts.csv", row.names = FALSE)
-
-
-#sub1.final <- read.csv("data/Sub1wts.csv")
+sub1.final <- read.csv("data/Sub1wts.csv")
 
 # remove colony 21
 sub1.final <- sub1.final %>% filter(Nest != "Col_21")
@@ -350,47 +350,72 @@ ggsave(resid.plots, filename = "figures/resid.plots.jpeg", dpi = "retina",
 
 
 ## Using SMI from Reviewer 2
+y <- lm(log10(weight.mg) ~ log10(CT.W), data = sub1.final)
+bOLS_s1 <- coef(y)[2]
+r_s1 <- cor(log10(sub1.final$CT.W), log10(sub1.final$weight.mg), method = "pearson")
+pop_cw_s1 <- mean(sub1.final$CT.W)
 
-y <- lm(log(weight.mg) ~ log(CT.W), data = sub1.final)
-bOLS <- coef(y)[2]
-r <- cor(sub1.final$CT.W, sub1.final$weight.mg, method = "pearson")
-pop_cw <- mean(sub1.final$CT.W)
 
-sub1.final$SMI <- rep(0, times = length(sub1.final$Date))
-for(i in 1:length(sub1.final$SMI)){
-  sub1.final$SMI[i] <- get_smi(pop_cw, sub1.final$CT.W[i], sub1.final$weight.mg[i], bOLS, r)
+
+all <- rbind(adults, sub2, sub1.final)
+all.bef <- all %>% filter(Measurement == "before")
+
+y <- lm(log10(weight.mg) ~ log10(CT.W), data = all.bef)
+bOLS_s1 <- coef(y)[2]
+r_s1 <- cor(log10(all.bef$CT.W), log10(all.bef$weight.mg), method = "pearson")
+pop_cw_s1 <- mean(all.bef$CT.W)
+
+all$SMI <- rep(0, times = length(all$Date))
+for(i in 1:length(all$SMI)){
+  all$SMI[i] <- get_smi(pop_cw_s1, all$CT.W[i], all$weight.mg[i], bOLS_s1, r_s1)
 }
 
-#### Effect Sizes ####
-# sub1, before comparing treatments
-sub1.before <- sub1.final %>% 
-  filter(Measurement == "before")
 
-
-# sub1, after comparing treatments
-sub1.after <- sub1.final %>% 
-  filter(Measurement == "after")
-
-
-# differences in residuals (before & after) between treatments
-
-s1.bf.col <- sub1.before %>% 
-  group_by(Nest, Treatment) %>% 
+all.bef <- all %>% filter(Measurement == "before")
+all.bef.col <-  all.bef %>% 
+  group_by(Nest, Treatment, instar) %>% 
   summarize(before.smi = mean(SMI))
 
-s1.af.col <- sub1.after %>% 
-  group_by(Nest, Treatment) %>% 
+all.after <- all %>% filter(Measurement == "after")
+all.after.col <-  all.after %>% 
+  group_by(Nest, Treatment, instar) %>% 
   summarize(after.smi = mean(SMI))
 
-sub1.col <- full_join(s1.bf.col, s1.af.col)
-sub1.col$diff.smi <- sub1.col$after.smi - sub1.col$before.smi
+all.col <- full_join(all.bef.col, all.after.col)
+all.col$diff.smi <- all.col$after.smi - all.col$before.smi
 # 
-# ggplot(data = sub1.col, aes(x = Treatment, y = diff.resids))+
-#   geom_boxplot()
 # 
-# anova(lm(diff.resids ~ Treatment, data = sub1.col))
-# cohen.d(sub1.col$diff.resids, sub1.col$Treatment)
-
+# #### Effect Sizes ####
+# # sub1, before comparing treatments
+# sub1.before <- sub1.final %>% 
+#   filter(Measurement == "before")
+# 
+# 
+# # sub1, after comparing treatments
+# sub1.after <- sub1.final %>% 
+#   filter(Measurement == "after")
+# 
+# 
+# # differences in residuals (before & after) between treatments
+# 
+# s1.bf.col <- sub1.before %>% 
+#   group_by(Nest, Treatment) %>% 
+#   summarize(before.smi = mean(SMI))
+# 
+# s1.af.col <- sub1.after %>% 
+#   group_by(Nest, Treatment) %>% 
+#   summarize(after.smi = mean(SMI))
+# 
+# sub1.col <- full_join(s1.bf.col, s1.af.col)
+# sub1.col$diff.smi <- sub1.col$after.smi - sub1.col$before.smi
+# # 
+# # ggplot(data = sub1.col, aes(x = Treatment, y = diff.resids))+
+# #   geom_boxplot()
+# # 
+# 
+# anova(lm(diff.smi ~ Treatment, data = sub1.col))
+# cohen.d(sub1.col$diff.smi, sub1.col$Treatment)
+# 
 
 # y1 <- lmer(resids ~ Treatment + (1|Nest), data = sub1.before)
 # Anova(y1, test.statistic = "F")
@@ -441,16 +466,17 @@ sub1.col$diff.smi <- sub1.col$after.smi - sub1.col$before.smi
 # 
 
 # POOLED -----------------------
-
-all.after.summary <- full_join(ad.af.col, s2.af.col, by = c("Nest", "Treatment"))
-all.after.summary <- full_join(all.after.summary, s1.af.col, by = c("Nest", "Treatment"))
-
-adults.col$instar <- "Adult"
-sub2.col$instar <- "Sub 2"
-sub1.col$instar <- "Sub 1"
-
-all.col <- rbind(adults.col, sub2.col, sub1.col)
+# 
+# all.after.summary <- full_join(ad.af.col, s2.af.col, by = c("Nest", "Treatment"))
+# all.after.summary <- full_join(all.after.summary, s1.af.col, by = c("Nest", "Treatment"))
+# 
+# adults.col$instar <- "Adult"
+# sub2.col$instar <- "Sub 2"
+# sub1.col$instar <- "Sub 1"
+# 
+# all.col <- rbind(adults.col, sub2.col, sub1.col)
 write.csv(all.col, "data/BCI_differences.csv", row.names = FALSE)
 
-df_new <- rbind(adults, sub2, sub1.final)
+# df_new <- rbind(adults, sub2, sub1.final)
+df_new <- all
 write.csv(df_new, "data/BCI_final.csv", row.names = FALSE)
